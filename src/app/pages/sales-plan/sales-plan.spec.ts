@@ -492,6 +492,47 @@ describe('SalesPlan', () => {
       expect(filtered[0].name).toBe('Paracetamol');
     }));
 
+    it('should compute filtered products sorted by price', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 3000 },
+        { id: '2', name: 'Product 2', price: 1000 },
+        { id: '3', name: 'Product 3', price: 2000 }
+      ];
+      component.setSortBy('price');
+      component.sortOrder.set('asc');
+      const filtered = component.filteredProducts();
+      expect(filtered[0].price).toBe(1000);
+      expect(filtered[1].price).toBe(2000);
+      expect(filtered[2].price).toBe(3000);
+    }));
+
+    it('should compute filtered products sorted by popularity', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '3', name: 'Product 3', price: 1000 },
+        { id: '1', name: 'Product 1', price: 1000 },
+        { id: '2', name: 'Product 2', price: 1000 }
+      ];
+      component.setSortBy('popularity');
+      component.sortOrder.set('asc');
+      const filtered = component.filteredProducts();
+      expect(filtered[0].id).toBe('1');
+      expect(filtered[1].id).toBe('2');
+      expect(filtered[2].id).toBe('3');
+    }));
+
+    it('should compute filtered products with no filter', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000 },
+        { id: '2', name: 'Product 2', price: 2000 }
+      ];
+      component.productSearchFilter.set('');
+      const filtered = component.filteredProducts();
+      expect(filtered.length).toBe(2);
+    }));
+
     it('should compute pagination info', fakeAsync(() => {
       flush();
       component.products = Array.from({ length: 25 }, (_, i) => ({
@@ -526,6 +567,87 @@ describe('SalesPlan', () => {
       tick();
       expect(component.isFormValid()).toBe(false);
     }));
+
+    it('should compute visiblePages for small total', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 5 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.itemsPerPage.set(1);
+      const pages = component.visiblePages();
+      expect(pages.length).toBe(5);
+    }));
+
+    it('should compute calculatedTotalValue', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 },
+        { id: '2', name: 'Product 2', price: 2000, goal: 5 }
+      ];
+      localStorage.setItem('userCountry', 'CO');
+      const total = component.calculatedTotalValue();
+      expect(total).toBe(20000); // 1000*10 + 2000*5
+    }));
+
+    it('should compute totalPlannedValue without manual value', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      const total = component.totalPlannedValue();
+      expect(total).toBeGreaterThan(0);
+    }));
+
+    it('should compute totalPlannedValue with manual value', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      (component as any).manualGoalValue.set(50000);
+      const total = component.totalPlannedValue();
+      expect(total).toBe(50000);
+    }));
+
+    it('should compute isGoalValid when valid', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      const calculated = component.calculatedTotalValue();
+      (component as any).manualGoalValue.set(calculated * 1.1); // 10% más
+      expect(component.isGoalValid()).toBe(true);
+    }));
+
+    it('should compute isGoalValid when invalid (too high)', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      const calculated = component.calculatedTotalValue();
+      (component as any).manualGoalValue.set(calculated * 2); // 100% más (fuera de rango)
+      expect(component.isGoalValid()).toBe(false);
+    }));
+
+    it('should compute isGoalValid when invalid (too low)', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      const calculated = component.calculatedTotalValue();
+      (component as any).manualGoalValue.set(calculated * 0.5); // 50% menos (fuera de rango)
+      expect(component.isGoalValid()).toBe(false);
+    }));
+
+    it('should compute isGoalValid when no manual value', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      (component as any).manualGoalValue.set(null);
+      expect(component.isGoalValid()).toBe(true);
+    }));
   });
 
   describe('Error Messages', () => {
@@ -550,6 +672,44 @@ describe('SalesPlan', () => {
       component.createSalesPlan();
       expect(offerService.createSalesPlan).not.toHaveBeenCalled();
     }));
+
+    it('should create sales plan when form is valid', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.patchValue({ region: 'Norte', quarter: 'Q1' });
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      offerService.createSalesPlan.and.returnValue(of({ success: true, plan_id: '123' }));
+      component.createSalesPlan();
+      tick();
+      expect(offerService.createSalesPlan).toHaveBeenCalled();
+      expect(component.saveStatus()).toBe('success');
+    }));
+
+    it('should handle error when creating sales plan', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.patchValue({ region: 'Norte', quarter: 'Q1' });
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      offerService.createSalesPlan.and.returnValue(throwError(() => new Error('Error')));
+      component.createSalesPlan();
+      tick();
+      expect(component.saveStatus()).toBe('error');
+    }));
+
+    it('should create sales plan with manual value', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.patchValue({ region: 'Norte', quarter: 'Q1' });
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      (component as any).manualGoalValue.set(50000);
+      offerService.createSalesPlan.and.returnValue(of({ success: true, plan_id: '123' }));
+      component.createSalesPlan();
+      tick();
+      expect(offerService.createSalesPlan).toHaveBeenCalled();
+    }));
   });
 
   describe('Load Products Error Handling', () => {
@@ -559,6 +719,87 @@ describe('SalesPlan', () => {
       component.products = [];
       tick();
       expect(component.products).toEqual([]);
+    }));
+  });
+
+  describe('Load Catalogs Error Handling', () => {
+    it('should handle error loading regions', fakeAsync(() => {
+      flush();
+      offerService.getRegions.and.returnValue(throwError(() => new Error('Error')));
+      tick();
+      expect(component.regionOptions.length).toBeGreaterThan(0);
+    }));
+
+    it('should handle error loading quarters', fakeAsync(() => {
+      flush();
+      offerService.getQuarters.and.returnValue(throwError(() => new Error('Error')));
+      tick();
+      expect(component.quarterOptions.length).toBeGreaterThan(0);
+    }));
+  });
+
+  describe('Form Value Changes', () => {
+    it('should update formVersion when region changes', fakeAsync(() => {
+      flush();
+      const initialVersion = (component as any).formVersion();
+      component.salesPlanForm.patchValue({ region: 'Norte' });
+      tick();
+      expect((component as any).formVersion()).toBeGreaterThan(initialVersion);
+    }));
+
+    it('should update formVersion when quarter changes', fakeAsync(() => {
+      flush();
+      const initialVersion = (component as any).formVersion();
+      component.salesPlanForm.patchValue({ quarter: 'Q1' });
+      tick();
+      expect((component as any).formVersion()).toBeGreaterThan(initialVersion);
+    }));
+  });
+
+  describe('Pagination Edge Cases', () => {
+    it('should handle pagination info with empty products', fakeAsync(() => {
+      flush();
+      component.products = [];
+      component.itemsPerPage.set(10);
+      component.currentPage.set(1);
+      const info = component.paginationInfo();
+      expect(info.total).toBe(0);
+      expect(info.totalPages).toBe(0);
+    }));
+
+    it('should handle visiblePages for large total', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 100 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.itemsPerPage.set(10);
+      component.currentPage.set(5);
+      const pages = component.visiblePages();
+      expect(pages.length).toBeGreaterThan(0);
+    }));
+  });
+
+  describe('Product Selection', () => {
+    it('should add product to selectedProducts when setting goal', fakeAsync(() => {
+      flush();
+      const product: any = { id: '1', name: 'Product 1', price: 1000 };
+      component.currentProduct = product;
+      component.goalValue = '100';
+      component.saveGoal();
+      expect(component.selectedProducts.length).toBeGreaterThan(0);
+    }));
+
+    it('should update total goal when product goal is saved', fakeAsync(() => {
+      flush();
+      const product: any = { id: '1', name: 'Product 1', price: 1000 };
+      component.selectedProducts = [product];
+      component.currentProduct = product;
+      component.goalValue = '50';
+      component.saveGoal();
+      tick();
+      expect(component.salesPlanForm.get('totalGoal')?.value).toBeDefined();
     }));
   });
 
