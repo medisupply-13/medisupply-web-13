@@ -2,12 +2,11 @@ import { Component } from '@angular/core';
 import { PageHeader } from '../../shared/page-header/page-header';
 import { ActionCard } from '../../shared/action-card/action-card';
 import { CommonModule } from '@angular/common';
-import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, PageHeader, ActionCard, TranslatePipe],
+  imports: [CommonModule, PageHeader, ActionCard],
   templateUrl: './reports.html',
   styleUrls: ['./reports.css'],
 })

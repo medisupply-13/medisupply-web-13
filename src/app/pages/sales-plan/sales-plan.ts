@@ -18,8 +18,10 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { PageHeader } from '../../shared/page-header/page-header';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
-import { currentLangSignal, loadTranslations } from '../../shared/lang/lang-store';
+import { currentLangSignal, loadTranslations, ACTIVE_TRANSLATIONS } from '../../shared/lang/lang-store';
 import { Router } from '@angular/router';
+import { ProductsService, Product as BackendProduct } from '../../services/products.service';
+import { OfferService, CreateSalesPlanPayload } from '../../services/offer.service';
 
 interface Product {
   id: string;
@@ -55,6 +57,8 @@ export class SalesPlan {
   private readonly appRef = inject(ApplicationRef);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly productsService = inject(ProductsService);
+  private readonly offerService = inject(OfferService);
   
   public readonly currentLangSignal = currentLangSignal;
   pageTitle = 'pageSalesPlanTitle';
@@ -64,39 +68,11 @@ export class SalesPlan {
   salesPlanForm: FormGroup;
 
   // Opciones para los selectores
-  regionOptions = [
-    { value: 'norte', labelKey: 'region_norte' },
-    { value: 'centro', labelKey: 'region_centro' },
-    { value: 'sur', labelKey: 'region_sur' },
-    { value: 'caribe', labelKey: 'region_caribe' },
-    { value: 'pacifico', labelKey: 'region_pacifico' },
-  ];
+  regionOptions: { value: string; label?: string; labelKey: string }[] = [];
+  quarterOptions: { value: string; labelKey: string }[] = [];
 
-  quarterOptions = [
-    { value: 'Q1', labelKey: 'quarter_q1' },
-    { value: 'Q2', labelKey: 'quarter_q2' },
-    { value: 'Q3', labelKey: 'quarter_q3' },
-    { value: 'Q4', labelKey: 'quarter_q4' },
-  ];
-
-  // Productos de ejemplo (en un caso real vendrían de un servicio)
-  products: Product[] = [
-    { id: '1', name: 'Aspirina 500mg', price: 2.50 },
-    { id: '2', name: 'Paracetamol 1g', price: 3.20, image: 'assets/images/products/acetaminofen.png' },
-    { id: '3', name: 'Ibuprofeno 400mg', price: 4.80, image: 'assets/images/products/ibuprofeno.png' },
-    { id: '4', name: 'Omeprazol 20mg', price: 5.60 },
-    { id: '5', name: 'Loratadina 10mg', price: 3.90, image: 'assets/images/products/dolex.png' },
-    { id: '6', name: 'Vitamina C 1000mg', price: 6.40 },
-    { id: '7', name: 'Calcio + Vitamina D', price: 8.20 },
-    { id: '8', name: 'Magnesio 400mg', price: 7.50 },
-    { id: '9', name: 'Omega 3 1000mg', price: 12.80 },
-    { id: '10', name: 'Probióticos', price: 15.60 },
-    { id: '11', name: 'Melatonina 3mg', price: 9.40 },
-    { id: '12', name: 'Jarabe para la Tos', price: 4.20 },
-    { id: '13', name: 'Crema Hidratante', price: 6.80 },
-    { id: '14', name: 'Protector Solar FPS 50', price: 8.90 },
-    { id: '15', name: 'Shampoo Anticaspa', price: 5.30 },
-  ];
+  // Productos (cargados desde backend)
+  products: Product[] = [];
 
   // Imagen por defecto
   defaultImage = 'assets/images/products/por-defecto.png';
@@ -119,10 +95,13 @@ export class SalesPlan {
   // Estados del selector de productos
   isProductSelectorOpen = false;
   selectedProducts: Product[] = [];
+  // Señal para forzar recomputes cuando cambien metas/selecciones
+  private selectedProductsVersion = signal(0);
+  private formVersion = signal(0);
   productSearchFilter = signal('');
   sortBy = signal<'name' | 'price' | 'popularity'>('name');
   sortOrder = signal<'asc' | 'desc'>('asc');
-  itemsPerPage = signal(20);
+  itemsPerPage = signal(10);
   currentPage = signal(1);
   
   // Estados del modal de meta
@@ -130,13 +109,26 @@ export class SalesPlan {
   currentProduct: Product | null = null;
   goalValue = '';
 
+  // Modal de confirmación de creación
+  showConfirmModal = false;
+
   // Estados del formulario
   saveStatus = signal<'idle' | 'saving' | 'success' | 'error'>('idle');
   formErrors = signal<Record<string, string>>({});
+  
+  // Almacenar meta editada manualmente
+  private manualGoalValue = signal<number | null>(null);
 
-  // Computed para validar si el formulario está completo
+  // Computed para validar si el formulario está completo (región + período + metas > 0)
   isFormValid = computed(() => {
-    return this.salesPlanForm.valid && this.selectedProducts.length > 0;
+    // Leer versión para que este cómputo reaccione a cambios en metas/selecciones
+    this.selectedProductsVersion();
+    this.formVersion();
+    const region = this.salesPlanForm.get('region')?.value;
+    const quarter = this.salesPlanForm.get('quarter')?.value;
+    // Considera metas en cualquier producto (seleccionado o no)
+    const hasUnits = this.products.some(p => (p.goal || 0) > 0);
+    return !!region && !!quarter && hasUnits;
   });
 
   // Computed para filtrar, ordenar y paginar productos
@@ -205,17 +197,151 @@ export class SalesPlan {
     };
   });
 
+  // Paginación adaptable con elipsis (sin placeholders negativos)
+  visiblePages = computed(() => {
+    const total = this.paginationInfo().totalPages;
+    const current = this.paginationInfo().current;
+    const maxButtons = 9; // máximo de elementos (números y elipsis)
+
+    const result: (number | string)[] = [];
+    if (total <= maxButtons) {
+      for (let i = 1; i <= total; i++) result.push(i);
+      return result;
+    }
+
+    result.push(1);
+
+    const windowSize = 5; // cantidad de páginas alrededor de la actual
+    let start = Math.max(2, current - Math.floor(windowSize / 2));
+    let end = Math.min(total - 1, current + Math.floor(windowSize / 2));
+
+    // Ajuste si ventana toca bordes
+    if (current <= 3) {
+      start = 2;
+      end = 2 + windowSize - 1;
+    } else if (current >= total - 2) {
+      end = total - 1;
+      start = end - (windowSize - 1);
+    }
+
+    if (start > 2) result.push('…');
+    for (let p = start; p <= end; p++) result.push(p);
+    if (end < total - 1) result.push('…');
+
+    result.push(total);
+    return result.slice(0, maxButtons);
+  });
+
   constructor() {
     this.salesPlanForm = this.fb.group({
       product: ['', Validators.required],
       region: ['', Validators.required],
       quarter: ['', Validators.required],
-      totalGoal: ['', Validators.required],
+      totalGoal: [''], // se calcula automáticamente con unidades x precio
+    });
+
+    // Cargar productos disponibles desde backend
+    this.loadAvailableProducts();
+
+    // Cargar catálogos desde Offer (8082)
+    this.loadCatalogs();
+
+    // Reactivar validación cuando cambien región o período
+    this.salesPlanForm.get('region')?.valueChanges.subscribe(() => {
+      this.formVersion.set(this.formVersion() + 1);
+    });
+    this.salesPlanForm.get('quarter')?.valueChanges.subscribe(() => {
+      this.formVersion.set(this.formVersion() + 1);
+    });
+  }
+
+  private loadCatalogs() {
+    // Regiones
+    this.offerService.getRegions().subscribe({
+      next: (regions) => {
+        // Backend retorna [{ value:'Norte', label:'Norte' }, ...]
+        const safe = Array.isArray(regions) ? regions : [];
+        // Usar el label directamente del backend
+        this.regionOptions = safe.map(r => ({ 
+          value: String(r.value), 
+          label: String(r.label || r.value), // Label directo del backend
+          labelKey: `region_${String(r.value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}` // Clave sin acentos para traducción
+        }));
+      },
+      error: () => {
+        // Fallback local
+        this.regionOptions = [
+          { value: 'norte', labelKey: 'region_norte' },
+          { value: 'centro', labelKey: 'region_centro' },
+          { value: 'sur', labelKey: 'region_sur' },
+          { value: 'caribe', labelKey: 'region_caribe' },
+          { value: 'pacifico', labelKey: 'region_pacifico' },
+        ];
+      }
+    });
+
+    // Períodos
+    this.offerService.getQuarters().subscribe({
+      next: (quarters) => {
+        const safe = Array.isArray(quarters) ? quarters : [];
+        // Backend retorna [{ value:'Q1', label:'Q1 - ...'}, ...]
+        this.quarterOptions = safe.map(q => ({ value: String(q.value), labelKey: `quarter_${String(q.value).toLowerCase()}` }));
+      },
+      error: () => {
+        this.quarterOptions = [
+          { value: 'Q1', labelKey: 'quarter_q1' },
+          { value: 'Q2', labelKey: 'quarter_q2' },
+          { value: 'Q3', labelKey: 'quarter_q3' },
+          { value: 'Q4', labelKey: 'quarter_q4' },
+        ];
+      }
+    });
+  }
+
+  private loadAvailableProducts() {
+    // Usa /products/available (ProductsService.getAvailableProducts)
+    console.log('🛒 SalesPlan: Cargando productos disponibles desde el backend...');
+    this.productsService.getAvailableProducts(1).subscribe({
+      next: (resp) => {
+        console.log('🛒 SalesPlan: Respuesta recibida:', resp);
+        const list = (resp.products || []) as unknown as BackendProduct[];
+        this.products = list.map((p: any) => ({
+          id: String(p.product_id ?? p.id ?? p.sku ?? ''),
+          name: p.name,
+          price: Number(p.value) || 0,
+          image: p.image_url || undefined,
+        }));
+        console.log('🛒 SalesPlan: Productos mapeados:', this.products.length);
+
+        // Forzar detección de cambios en caso de que no se actualice de inmediato
+        this.appRef.tick();
+      },
+      error: () => {
+        console.error('🛒 SalesPlan: Error cargando productos.');
+        // Mantener lista vacía si falla (botón quedará deshabilitado hasta seleccionar productos)
+        this.products = [];
+        this.appRef.tick();
+      },
     });
   }
 
   onTotalGoalChange(totalGoal: string) {
     this.salesPlanForm.get('totalGoal')?.setValue(totalGoal);
+    
+    // Extraer el valor numérico del string (remover símbolos de moneda y comas)
+    const numericValue = this.extractNumericValue(totalGoal);
+    if (!isNaN(numericValue) && numericValue > 0) {
+      this.manualGoalValue.set(numericValue);
+    }
+  }
+  
+  private extractNumericValue(formattedValue: string): number {
+    // Remover símbolos de moneda comunes, comas y espacios
+    // Remover: $, S/, coma, espacios
+    const cleaned = formattedValue
+      .replace(/S\//g, '')      // Remover S/ específicamente primero
+      .replace(/[$,\s]/g, '');   // Luego remover $, comas y espacios
+    return parseFloat(cleaned) || 0;
   }
 
   toggleProductSelector() {
@@ -231,6 +357,8 @@ export class SalesPlan {
       // Si no está seleccionado, lo agregamos
       this.selectedProducts.push(product);
     }
+    this.updateTotalGoalFromProducts();
+    this.selectedProductsVersion.set(this.selectedProductsVersion() + 1);
   }
 
   isProductSelected(product: Product): boolean {
@@ -257,8 +385,27 @@ export class SalesPlan {
   saveGoal() {
     if (this.currentProduct && this.goalValue && !isNaN(Number(this.goalValue)) && Number(this.goalValue) > 0) {
       this.currentProduct.goal = Number(this.goalValue);
+      // Asegurar que el producto con meta quede seleccionado
+      const exists = this.selectedProducts.some(p => p.id === this.currentProduct!.id);
+      if (!exists) {
+        this.selectedProducts.push(this.currentProduct);
+      }
+      // Reset manual value cuando se recalcula automáticamente
+      this.manualGoalValue.set(null);
+      this.updateTotalGoalFromProducts();
+      this.selectedProductsVersion.set(this.selectedProductsVersion() + 1);
       this.closeGoalModal();
     }
+  }
+
+  private updateTotalGoalFromProducts(): void {
+    const totalValue = this.selectedProducts.reduce((sum, p) => {
+      const units = p.goal || 0;
+      const unitPrice = this.convertValue(p.price);
+      return sum + (units * unitPrice);
+    }, 0);
+    const formatted = `${this.currencySymbol()} ${totalValue.toLocaleString()}`;
+    this.salesPlanForm.get('totalGoal')?.setValue(formatted, { emitEvent: false });
   }
 
   closeGoalModal() {
@@ -328,6 +475,52 @@ export class SalesPlan {
     return this.convertValue(product.price);
   }
 
+  // Productos con meta > 0
+  plannedProducts = computed(() => this.products.filter(p => (p.goal || 0) > 0));
+
+  // Valor calculado automáticamente (suma de productos x unidades)
+  calculatedTotalValue = computed(() => {
+    return this.plannedProducts().reduce((sum, p) => sum + (this.convertValue(p.price) * (p.goal || 0)), 0);
+  });
+
+  // Resumen monetario total (usa valor manual si existe, sino calcula)
+  totalPlannedValue = computed(() => {
+    const manualValue = this.manualGoalValue();
+    if (manualValue !== null) {
+      return manualValue;
+    }
+    return this.calculatedTotalValue();
+  });
+
+  // Validar si el valor manual está dentro del rango permitido
+  // Rango permitido: entre 10% menor y 20% mayor que el calculado
+  isGoalValid = computed(() => {
+    const manualValue = this.manualGoalValue();
+    const calculatedValue = this.calculatedTotalValue();
+    
+    // Si no hay valor manual, es válido (usa el calculado)
+    if (manualValue === null || calculatedValue === 0) {
+      return true;
+    }
+    
+    // Calcular los límites: 10% menor y 20% mayor
+    const minAllowed = calculatedValue * 0.90;  // 10% menos
+    const maxAllowed = calculatedValue * 1.20;  // 20% más
+    
+    // Validar que esté dentro del rango
+    return manualValue >= minAllowed && manualValue <= maxAllowed;
+  });
+
+  // Abrir confirmación antes de crear
+  openConfirm() {
+    if (!this.isFormValid()) return;
+    this.showConfirmModal = true;
+  }
+
+  cancelConfirm() {
+    this.showConfirmModal = false;
+  }
+
   clearError(field: string) {
     const errors = { ...this.formErrors() };
     delete errors[field];
@@ -337,9 +530,10 @@ export class SalesPlan {
   validateField(fieldName: string) {
     const field = this.salesPlanForm.get(fieldName);
     if (field && field.invalid && field.touched) {
+      // Guardar la clave de traducción en lugar del texto hardcodeado
       this.formErrors.set({
         ...this.formErrors(),
-        [fieldName]: 'Campo obligatorio'
+        [fieldName]: 'fieldRequired'
       });
     } else {
       this.clearError(fieldName);
@@ -351,30 +545,54 @@ export class SalesPlan {
       this.saveStatus.set('saving');
       
       // Preparar datos del plan de venta
+      const totalUnits = this.products.reduce((sum, p) => sum + (p.goal || 0), 0);
+      const totalValue = this.products.reduce((sum, p) => sum + ((p.goal || 0) * this.convertValue(p.price)), 0);
+      
+      // Usar valor manual si existe, sino usar el calculado
+      const manualValue = this.manualGoalValue();
+      const finalTotalGoal = manualValue !== null ? manualValue : totalValue;
+      
       const salesPlanData = {
-        region: this.salesPlanForm.get('region')?.value,
-        quarter: this.salesPlanForm.get('quarter')?.value,
-        totalGoal: this.salesPlanForm.get('totalGoal')?.value,
-        products: this.selectedProducts.map(product => ({
-          id: product.id,
-          name: product.name,
-          goal: product.goal || 0
-        }))
+        region: this.salesPlanForm.get('region')?.value, // 'Norte', 'Centro', ...
+        quarter: this.salesPlanForm.get('quarter')?.value, // 'Q1'..'Q4'
+        year: new Date().getFullYear(),
+        total_goal: finalTotalGoal, // valor monetario de la meta total (manual o calculado)
+        products: this.products
+          .filter(p => (p.goal || 0) > 0)
+          .map(p => ({
+            product_id: Number(p.id) || 0,
+            individual_goal: p.goal || 0
+          }))
       };
       
-      console.log('Plan de venta creado:', salesPlanData);
-      
-      // Simular llamada al servicio
-      setTimeout(() => {
-        this.saveStatus.set('success');
-        setTimeout(() => {
-          this.router.navigate(['/dashboard']);
-        }, 2000);
-      }, 1000);
+      console.log('Plan de venta a enviar:', salesPlanData);
+
+      const payload: CreateSalesPlanPayload = salesPlanData;
+
+      this.offerService.createSalesPlan(payload).subscribe({
+        next: (resp) => {
+          const ok = !!resp && (resp as any).success === true || typeof (resp as any)?.plan_id !== 'undefined';
+          this.saveStatus.set(ok ? 'success' : 'error');
+          this.showConfirmModal = false;
+          // No redirigir automáticamente; permanecer en la página
+        },
+        error: () => {
+          this.saveStatus.set('error');
+          this.showConfirmModal = false;
+        }
+      });
     }
   }
 
   getErrorMessage(fieldName: string): string {
-    return this.formErrors()[fieldName] || '';
+    // Acceder al signal del idioma para reactividad
+    currentLangSignal();
+    
+    const errorKey = this.formErrors()[fieldName];
+    if (!errorKey) return '';
+    
+    // Si es una clave de traducción, devolver el texto traducido
+    // Si no existe la traducción, devolver la clave como fallback
+    return ACTIVE_TRANSLATIONS[errorKey] || errorKey;
   }
 }

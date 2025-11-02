@@ -5,7 +5,7 @@
 
 <div class="sales-plan-container">
   <div class="form-container">
-    <form [formGroup]="salesPlanForm" (ngSubmit)="createSalesPlan()">
+    <form [formGroup]="salesPlanForm" (ngSubmit)="openConfirm()">
       
       <!-- Selector de Producto -->
       <div class="product-selector-section">
@@ -36,7 +36,10 @@
                         matSuffix 
                         *ngIf="productSearchFilter()"
                         (click)="clearProductFilter()"
-                        class="clear-button">
+                        class="clear-button"
+                        [attr.aria-label]="'clearFilterAria' | translate"
+                        [attr.title]="'clearFilterAria' | translate"
+                        type="button">
                         <mat-icon>clear</mat-icon>
                       </button>
                     </mat-form-field>
@@ -46,7 +49,7 @@
                   <div class="product-sort-pagination">
                     <!-- Ordenamiento -->
                     <div class="sort-controls">
-                      <mat-form-field appearance="outline" class="sort-field">
+                      <mat-form-field appearance="outline" floatLabel="always" class="sort-field">
                         <mat-label>{{ 'sort_by_label' | translate }}</mat-label>
                         <mat-select 
                           [ngModel]="sortBy()"
@@ -62,23 +65,25 @@
                         mat-icon-button 
                         (click)="toggleSortOrder()"
                         class="sort-order-button"
-                        [title]="sortOrder() === 'asc' ? 'sort_desc' : 'sort_asc'">
+                        [attr.title]="sortOrder() === 'asc' ? ('sort_desc' | translate) : ('sort_asc' | translate)"
+                        [attr.aria-label]="sortOrder() === 'asc' ? ('sort_desc' | translate) : ('sort_asc' | translate)"
+                        type="button">
                         <mat-icon>{{ sortOrder() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
                       </button>
                     </div>
 
                     <!-- Items por página -->
                     <div class="items-per-page">
-                      <mat-form-field appearance="outline" class="items-field">
+                      <mat-form-field appearance="outline" floatLabel="always" class="items-field">
                         <mat-label>{{ 'items_per_page' | translate }}</mat-label>
                         <mat-select 
                           [ngModel]="itemsPerPage()"
                           (ngModelChange)="setItemsPerPage($event)"
                           [ngModelOptions]="{standalone: true}">
-                          <mat-option value="10">10</mat-option>
-                          <mat-option value="20">20</mat-option>
-                          <mat-option value="50">50</mat-option>
-                          <mat-option value="100">100</mat-option>
+                          <mat-option [value]="10">10</mat-option>
+                          <mat-option [value]="20">20</mat-option>
+                          <mat-option [value]="50">50</mat-option>
+                          <mat-option [value]="100">100</mat-option>
                         </mat-select>
                       </mat-form-field>
                     </div>
@@ -109,11 +114,19 @@
           <div class="product-card" 
                *ngFor="let product of paginatedProducts()" 
                (click)="selectProduct(product)"
-               [class.selected]="isProductSelected(product)">
+               [class.selected]="isProductSelected(product)"
+               [class.has-goal]="product.goal && product.goal > 0">
             
             <!-- Indicador de selección -->
             <div class="selection-indicator" *ngIf="isProductSelected(product)">
               <mat-icon>check_circle</mat-icon>
+            </div>
+
+            <!-- Franja de meta establecida (abajo, en unidades) -->
+            <div class="goal-ribbon bottom" *ngIf="product.goal && product.goal > 0">
+              <span class="goal-text">
+                {{ 'goal_label' | translate }}: {{ product.goal | number:'1.0-0' }} {{ 'units' | translate }}
+              </span>
             </div>
             
             <!-- Columna 1: Imagen -->
@@ -134,7 +147,8 @@
             <!-- Columna 3: Botón Meta -->
             <button class="meta-button" 
                     (click)="setProductGoal(product, $event)"
-                    [disabled]="!isProductSelected(product)">
+                    [disabled]="!isProductSelected(product)"
+                    type="button">
               {{ 'goal_button' | translate }}
             </button>
           </div>
@@ -142,36 +156,46 @@
 
         <!-- Controles de paginación -->
         <div class="pagination-controls" *ngIf="isProductSelectorOpen && paginationInfo().totalPages > 1">
-          <div class="pagination-info">
-            <span>{{ 'page' | translate }} {{ paginationInfo().current }} {{ 'of' | translate }} {{ paginationInfo().totalPages }}</span>
-          </div>
+          
           
           <div class="pagination-buttons">
             <button 
               mat-icon-button 
               (click)="previousPage()"
               [disabled]="paginationInfo().current === 1"
-              class="pagination-button">
+              class="pagination-button"
+              [attr.aria-label]="'prevPage' | translate"
+              [attr.title]="'prevPage' | translate"
+              type="button">
               <mat-icon>chevron_left</mat-icon>
             </button>
             
-            <!-- Números de página -->
+            <!-- Números de página (ventana deslizante con elipsis) -->
             <div class="page-numbers">
-              <button 
-                mat-button 
-                *ngFor="let page of [].constructor(paginationInfo().totalPages); let i = index"
-                (click)="goToPage(i + 1)"
-                [class.active]="paginationInfo().current === (i + 1)"
-                class="page-button">
-                {{ i + 1 }}
-              </button>
+              <ng-container *ngFor="let p of visiblePages()">
+                <button
+                  mat-button
+                  *ngIf="p !== '…'; else ellipsisTpl"
+                  (click)="goToPage(+p)"
+                  [class.active]="paginationInfo().current === p"
+                  class="page-button"
+                  type="button">
+                  {{ p }}
+                </button>
+              </ng-container>
+              <ng-template #ellipsisTpl>
+                <button mat-button class="page-button" disabled type="button">…</button>
+              </ng-template>
             </div>
             
             <button 
               mat-icon-button 
               (click)="nextPage()"
               [disabled]="paginationInfo().current === paginationInfo().totalPages"
-              class="pagination-button">
+              class="pagination-button"
+              [attr.aria-label]="'nextPage' | translate"
+              [attr.title]="'nextPage' | translate"
+              type="button">
               <mat-icon>chevron_right</mat-icon>
             </button>
           </div>
@@ -188,7 +212,7 @@
           <mat-option 
             *ngFor="let region of regionOptions" 
             [value]="region.value">
-            {{ region.labelKey | translate }}
+            {{ region.label || (region.labelKey | translate) }}
           </mat-option>
         </mat-select>
         <mat-error *ngIf="getErrorMessage('region')">
@@ -278,7 +302,7 @@
       </p>
       
       <mat-form-field appearance="outline" class="full-width">
-        <mat-label>{{ 'goal_value_label' | translate }}</mat-label>
+        <mat-label>{{ 'goal_units_label' | translate }}</mat-label>
         <input 
           matInput 
           type="number" 
@@ -304,6 +328,66 @@
         [disabled]="!goalValue || +goalValue <= 0"
         class="save-button">
         {{ 'save_goal_button' | translate }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmación de creación de plan -->
+<div class="modal-overlay" *ngIf="showConfirmModal" (click)="cancelConfirm()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ 'confirm_plan_title' | translate }}</h3>
+      <button class="close-button" (click)="cancelConfirm()" type="button">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="product-info">
+        {{ 'summary_region' | translate }}: <strong>{{ (salesPlanForm.get('region')?.value || '') | translate }}</strong>
+        <br>
+        {{ 'summary_quarter' | translate }}: <strong>{{ (salesPlanForm.get('quarter')?.value || '') }}</strong>
+      </p>
+
+      <div *ngIf="plannedProducts().length > 0">
+        <ul>
+          <li *ngFor="let p of plannedProducts()">
+            <strong>{{ p.name }}</strong> — {{ p.goal | number:'1.0-0' }} {{ 'units' | translate }}
+          </li>
+        </ul>
+      </div>
+
+      <p style="margin-top:12px; font-weight:600;">
+        {{ 'summary_total_value' | translate }}: {{ totalPlannedValue() | currency:currencySymbol():'symbol':'1.0-0' }}
+      </p>
+
+      <!-- Mensaje de advertencia si el valor manual está fuera del rango permitido -->
+      <div *ngIf="!isGoalValid()" style="margin-top:16px; padding:12px; background-color:#fff3cd; border:1px solid #ffc107; border-radius:4px;">
+        <div style="display:flex; align-items:center; gap:8px; color:#856404;">
+          <mat-icon style="font-size:20px; width:20px; height:20px;">warning</mat-icon>
+          <span style="font-weight:500;">Advertencia de validación</span>
+        </div>
+        <p style="margin:8px 0 0 0; color:#856404; font-size:14px;">
+          El valor ingresado debe estar dentro del rango permitido: entre 10% menos y 20% más que el valor calculado automáticamente 
+          ({{ calculatedTotalValue() | currency:currencySymbol():'symbol':'1.0-0' }}). 
+          Por favor, ajusta los valores de los productos o el total para continuar.
+        </p>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button mat-button (click)="cancelConfirm()" class="cancel-button" type="button">
+        {{ 'cancel_button' | translate }}
+      </button>
+      <button 
+        mat-raised-button 
+        color="primary" 
+        (click)="showConfirmModal=false; createSalesPlan()" 
+        [disabled]="!isGoalValid()"
+        class="save-button" 
+        type="button">
+        {{ 'confirm_button' | translate }}
       </button>
     </div>
   </div>

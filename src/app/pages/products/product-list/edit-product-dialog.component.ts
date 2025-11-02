@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { Product } from './product-list';
+import { Product } from '../../../services/products.service';
 
 export interface EditProductDialogData {
   product: Product;
@@ -50,12 +50,12 @@ export interface EditProductDialogData {
             <mat-label>Nombre *</mat-label>
             <input 
               matInput 
-              [(ngModel)]="editedProduct.nombre" 
-              name="nombre"
+              [(ngModel)]="editedProduct.name" 
+              name="name"
               required
               placeholder="Ingrese el nombre del producto"
-              #nombreInput="ngModel">
-            <mat-error *ngIf="nombreInput.invalid && nombreInput.touched">
+              #nameInput="ngModel">
+            <mat-error *ngIf="nameInput.invalid && nameInput.touched">
               El nombre es requerido
             </mat-error>
           </mat-form-field>
@@ -64,14 +64,14 @@ export interface EditProductDialogData {
             <mat-label>Descripción *</mat-label>
             <textarea 
               matInput 
-              [(ngModel)]="editedProduct.descripcion" 
-              name="descripcion"
+              [(ngModel)]="editedProduct.name" 
+              name="description"
               rows="3"
               required
               placeholder="Ingrese la descripción del producto"
-              #descripcionInput="ngModel">
+              #descriptionInput="ngModel">
             </textarea>
-            <mat-error *ngIf="descripcionInput.invalid && descripcionInput.touched">
+            <mat-error *ngIf="descriptionInput.invalid && descriptionInput.touched">
               La descripción es requerida
             </mat-error>
           </mat-form-field>
@@ -82,68 +82,51 @@ export interface EditProductDialogData {
               <input 
                 matInput 
                 type="number" 
-                [(ngModel)]="editedProduct.precio" 
-                name="precio"
+                [(ngModel)]="editedProduct.value" 
+                name="value"
                 min="0"
                 step="0.01"
                 required
                 placeholder="0.00"
-                #precioInput="ngModel">
+                #valueInput="ngModel">
               <span matPrefix>$&nbsp;</span>
-              <mat-error *ngIf="precioInput.invalid && precioInput.touched">
+              <mat-error *ngIf="valueInput.invalid && valueInput.touched">
                 El precio debe ser mayor a 0
               </mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="half-width">
-              <mat-label>Stock Mínimo *</mat-label>
+              <mat-label>Stock Total *</mat-label>
               <input 
                 matInput 
                 type="number" 
-                [(ngModel)]="editedProduct.stock_minimo" 
-                name="stock_minimo"
+                [(ngModel)]="editedProduct.total_quantity" 
+                name="total_quantity"
                 min="0"
                 required
                 placeholder="0"
-                #stockInput="ngModel">
-              <mat-error *ngIf="stockInput.invalid && stockInput.touched">
-                El stock mínimo debe ser mayor o igual a 0
+                #quantityInput="ngModel">
+              <mat-error *ngIf="quantityInput.invalid && quantityInput.touched">
+                El stock total debe ser mayor o igual a 0
               </mat-error>
             </mat-form-field>
           </div>
 
           <div class="form-row">
-            <mat-form-field appearance="outline" class="half-width">
+            <mat-form-field appearance="outline" class="full-width">
               <mat-label>Categoría *</mat-label>
               <mat-select 
-                [(ngModel)]="editedProduct.categoria" 
-                name="categoria"
+                [(ngModel)]="editedProduct.category_name" 
+                name="category_name"
                 required
                 placeholder="Seleccione una categoría"
-                #categoriaInput="ngModel">
+                #categoryInput="ngModel">
                 <mat-option *ngFor="let category of data.categories" [value]="category">
                   {{ category }}
                 </mat-option>
               </mat-select>
-              <mat-error *ngIf="categoriaInput.invalid && categoriaInput.touched">
+              <mat-error *ngIf="categoryInput.invalid && categoryInput.touched">
                 La categoría es requerida
-              </mat-error>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="half-width">
-              <mat-label>Unidad de Medida *</mat-label>
-              <mat-select 
-                [(ngModel)]="editedProduct.unidad_medida" 
-                name="unidad_medida"
-                required
-                placeholder="Seleccione una unidad"
-                #unidadInput="ngModel">
-                <mat-option *ngFor="let unit of data.units" [value]="unit">
-                  {{ unit }}
-                </mat-option>
-              </mat-select>
-              <mat-error *ngIf="unidadInput.invalid && unidadInput.touched">
-                La unidad de medida es requerida
               </mat-error>
             </mat-form-field>
           </div>
@@ -293,9 +276,9 @@ export class EditProductDialog {
   }
 
   onSave(): void {
-    if (this.editedProduct.sku && this.editedProduct.nombre && this.editedProduct.descripcion && 
-        this.editedProduct.precio > 0 && this.editedProduct.stock_minimo >= 0 &&
-        this.editedProduct.categoria && this.editedProduct.unidad_medida) {
+    if (this.editedProduct.sku && this.editedProduct.name && 
+        this.editedProduct.value > 0 && this.editedProduct.total_quantity >= 0 &&
+        this.editedProduct.category_name) {
       this.dialogRef.close(this.editedProduct);
     }
   }

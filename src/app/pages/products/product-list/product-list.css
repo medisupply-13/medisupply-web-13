@@ -458,6 +458,21 @@ mat-paginator .mat-mdc-paginator-page-size-select {
   margin: 0 8px;
 }
 
+/* Indicador de carga */
+.loading-container {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.loading-text {
+  margin: 0;
+  color: #666;
+  font-size: 0.875rem;
+}
+
 /* Tabla responsive */
 @media (max-width: 1200px) {
   .table-container {
