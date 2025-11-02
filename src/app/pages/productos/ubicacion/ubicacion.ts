@@ -366,16 +366,31 @@ export class UbicacionComponent implements OnInit {
   }
 
   private loadProductsByWarehouse(warehouseId: string) {
+    const startTime = performance.now();
     this.loading = true;
     this.message = null;
     
     console.log('📦 Ubicacion: Cargando productos para bodega:', warehouseId);
     console.log('📡 Ubicacion: Llamando al backend para warehouseId:', warehouseId, '(incluyendo productos sin stock y ubicaciones)');
+    console.log('🎯 Ubicacion: ASR - Consulta de localización de producto en bodega');
+    console.log('🎯 Ubicacion: ASR - Objetivo: < 2 segundos para visualizar información física del inventario');
+    
     // Cargar todos los productos con ubicaciones, incluyendo los que tienen stock = 0
     this.locationService.getProductsByWarehouse(parseInt(warehouseId), true, true).subscribe({
       next: (response) => {
+        const endTime = performance.now();
+        const duration = (endTime - startTime) / 1000;
+        
         console.log('✅ Ubicacion: Respuesta del backend para productos:', response);
         console.log('📦 Ubicacion: Productos recibidos del backend:', response.products.length);
+        console.log('⏰ Ubicacion: Tiempo total de carga (segundos):', Math.round(duration * 100) / 100);
+        
+        // Validar ASR: tiempo de respuesta < 2 segundos
+        if (duration < 2) {
+          console.log('✅ Ubicacion: ASR CUMPLIDO - Información visualizada en', Math.round(duration * 100) / 100, 'segundos');
+        } else {
+          console.warn('⚠️ Ubicacion: ASR NO CUMPLIDO - Información visualizada en', Math.round(duration * 100) / 100, 'segundos (>= 2s)');
+        }
         
         // El backend ya agrupa por SKU y devuelve el total en quantity
         // Solo necesitamos mapear al formato del frontend

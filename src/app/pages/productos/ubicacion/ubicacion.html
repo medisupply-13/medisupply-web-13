@@ -51,14 +51,14 @@
     <div class="panel-header">
       <div class="panel-title">
         <mat-icon>inventory_2</mat-icon>
-        <h3>Productos Encontrados ({{ getTotalFilteredProducts() }})</h3>
+        <h3>{{ 'productsFoundTitle' | translate }} ({{ getTotalFilteredProducts() }})</h3>
         <span class="sort-indicator" *ngIf="sortBy !== 'none'">
           <mat-icon>{{ getSortIcon() }}</mat-icon>
           <span>{{ getSortLabel() }}</span>
         </span>
       </div>
       <div class="panel-actions">
-        <button mat-icon-button (click)="toggleViewMode()" [title]="viewMode === 'grid' ? 'Vista Lista' : 'Vista Cuadrícula'">
+        <button mat-icon-button (click)="toggleViewMode()" [title]="(viewMode === 'grid' ? 'viewListTitle' : 'viewGridTitle') | translate">
           <mat-icon>{{ viewMode === 'grid' ? 'view_list' : 'view_module' }}</mat-icon>
         </button>
         <button mat-icon-button (click)="toggleSort()" [title]="getSortTooltip()">
@@ -73,19 +73,19 @@
         mat-stroked-button 
         [class.active]="availabilityFilter === 'all'"
         (click)="setAvailabilityFilter('all')">
-        Todos ({{ getTotalFilteredProducts() }})
+        {{ 'filterAll' | translate }} ({{ getTotalFilteredProducts() }})
       </button>
       <button 
         mat-stroked-button 
         [class.active]="availabilityFilter === 'available'"
         (click)="setAvailabilityFilter('available')">
-        Disponibles ({{ getAvailableCount() }})
+        {{ 'filterAvailable' | translate }} ({{ getAvailableCount() }})
       </button>
       <button 
         mat-stroked-button 
         [class.active]="availabilityFilter === 'unavailable'"
         (click)="setAvailabilityFilter('unavailable')">
-        Sin Stock ({{ getUnavailableCount() }})
+        {{ 'filterUnavailable' | translate }} ({{ getUnavailableCount() }})
       </button>
     </div>
 
@@ -138,7 +138,7 @@
             [disabled]="!product.hasAvailability"
             class="action-button">
             <mat-icon>location_on</mat-icon>
-            Ver Ubicaciones
+            {{ 'viewLocations' | translate }}
           </button>
         </div>
       </div>
@@ -188,39 +188,39 @@
     <div class="popup-body">
       <div class="product-info">
         <h4 class="product-name">{{ selectedProduct.name }}</h4>
-        <p class="product-sku">SKU {{ selectedProduct.sku }} • Total: {{ selectedProduct.totalAvailable }}</p>
+        <p class="product-sku">{{ 'skuLabel' | translate }} {{ selectedProduct.sku }} • {{ 'totalLabel' | translate }}: {{ selectedProduct.totalAvailable }}</p>
       </div>
       
       <div class="location-details" *ngIf="selectedProduct.locations && selectedProduct.locations.length > 0">
-        <h5 class="location-title">Ubicación Física</h5>
+        <h5 class="location-title">{{ 'physicalLocationTitle' | translate }}</h5>
         <div class="location-grid">
           <div class="location-item">
-            <span class="location-label">Sección</span>
+            <span class="location-label">{{ 'locationSection' | translate }}</span>
             <span class="location-value">{{ selectedProduct.locations[0].section }}</span>
           </div>
           <div class="location-item">
-            <span class="location-label">Pasillo</span>
+            <span class="location-label">{{ 'locationAisle' | translate }}</span>
             <span class="location-value">{{ selectedProduct.locations[0].aisle }}</span>
           </div>
           <div class="location-item">
-            <span class="location-label">Mueble</span>
+            <span class="location-label">{{ 'locationShelf' | translate }}</span>
             <span class="location-value">{{ selectedProduct.locations[0].shelf }}</span>
           </div>
           <div class="location-item">
-            <span class="location-label">Nivel</span>
+            <span class="location-label">{{ 'locationLevel' | translate }}</span>
             <span class="location-value">{{ selectedProduct.locations[0].level }}</span>
           </div>
         </div>
       </div>
       
       <div class="lots-section" *ngIf="selectedProduct.locations && selectedProduct.locations.length > 0">
-        <h5 class="lots-title">Detalle de Lotes</h5>
+        <h5 class="lots-title">{{ 'lotsDetailTitle' | translate }}</h5>
         <div class="lots-table">
           <div class="table-header">
-            <span>Lote</span>
-            <span>Vence</span>
-            <span>Disponible</span>
-            <span>Reservada</span>
+            <span>{{ 'lotLabel' | translate }}</span>
+            <span>{{ 'expiresLabel' | translate }}</span>
+            <span>{{ 'availableLabel' | translate }}</span>
+            <span>{{ 'reservedLabel' | translate }}</span>
           </div>
           <div class="table-row" *ngFor="let location of selectedProduct.locations">
             <span class="lot-number">{{ location.lot }}</span>
