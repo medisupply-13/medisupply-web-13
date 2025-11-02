@@ -18,7 +18,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { PageHeader } from '../../shared/page-header/page-header';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
-import { currentLangSignal, loadTranslations } from '../../shared/lang/lang-store';
+import { currentLangSignal, loadTranslations, ACTIVE_TRANSLATIONS } from '../../shared/lang/lang-store';
 import { Router } from '@angular/router';
 import { ProductsService, Product as BackendProduct } from '../../services/products.service';
 import { OfferService, CreateSalesPlanPayload } from '../../services/offer.service';
@@ -530,9 +530,10 @@ export class SalesPlan {
   validateField(fieldName: string) {
     const field = this.salesPlanForm.get(fieldName);
     if (field && field.invalid && field.touched) {
+      // Guardar la clave de traducción en lugar del texto hardcodeado
       this.formErrors.set({
         ...this.formErrors(),
-        [fieldName]: 'Campo obligatorio'
+        [fieldName]: 'fieldRequired'
       });
     } else {
       this.clearError(fieldName);
@@ -584,6 +585,14 @@ export class SalesPlan {
   }
 
   getErrorMessage(fieldName: string): string {
-    return this.formErrors()[fieldName] || '';
+    // Acceder al signal del idioma para reactividad
+    currentLangSignal();
+    
+    const errorKey = this.formErrors()[fieldName];
+    if (!errorKey) return '';
+    
+    // Si es una clave de traducción, devolver el texto traducido
+    // Si no existe la traducción, devolver la clave como fallback
+    return ACTIVE_TRANSLATIONS[errorKey] || errorKey;
   }
 }
