@@ -162,4 +162,214 @@ describe('SalesPlan', () => {
     }));
   });
 
+  describe('Product Selector', () => {
+    it('should toggle product selector', fakeAsync(() => {
+      flush();
+      const initial = component.isProductSelectorOpen;
+      component.toggleProductSelector();
+      expect(component.isProductSelectorOpen).toBe(!initial);
+      component.toggleProductSelector();
+      expect(component.isProductSelectorOpen).toBe(initial);
+    }));
+
+    it('should check if product is selected', fakeAsync(() => {
+      flush();
+      const product = { id: '1', name: 'Product 1', price: 1000 };
+      expect(component.isProductSelected(product)).toBe(false);
+      component.selectProduct(product);
+      expect(component.isProductSelected(product)).toBe(true);
+    }));
+
+    it('should get selected products text', fakeAsync(() => {
+      flush();
+      expect(component.getSelectedProductsText()).toBe('select_products');
+      
+      const product = { id: '1', name: 'Product 1', price: 1000 };
+      component.selectProduct(product);
+      expect(component.getSelectedProductsText()).toBe('Product 1');
+      
+      const product2 = { id: '2', name: 'Product 2', price: 2000 };
+      component.selectProduct(product2);
+      expect(component.getSelectedProductsText()).toContain('products_selected');
+    }));
+  });
+
+  describe('Goal Modal', () => {
+    it('should close goal modal', fakeAsync(() => {
+      flush();
+      component.showGoalModal = true;
+      component.currentProduct = { id: '1', name: 'Product 1', price: 1000 };
+      component.goalValue = '100';
+      component.closeGoalModal();
+      expect(component.showGoalModal).toBe(false);
+      expect(component.currentProduct).toBeNull();
+      expect(component.goalValue).toBe('');
+    }));
+  });
+
+  describe('Product Filter and Search', () => {
+    it('should clear product filter', fakeAsync(() => {
+      flush();
+      component.productSearchFilter.set('test');
+      component.clearProductFilter();
+      expect(component.productSearchFilter()).toBe('');
+    }));
+
+    it('should handle search change', fakeAsync(() => {
+      flush();
+      component.currentPage.set(2);
+      component.onSearchChange('new search');
+      expect(component.productSearchFilter()).toBe('new search');
+      expect(component.currentPage()).toBe(1);
+    }));
+  });
+
+  describe('Sorting', () => {
+    it('should set sort by', fakeAsync(() => {
+      flush();
+      component.setSortBy('price');
+      expect(component.sortBy()).toBe('price');
+      component.setSortBy('name');
+      expect(component.sortBy()).toBe('name');
+      component.setSortBy('popularity');
+      expect(component.sortBy()).toBe('popularity');
+    }));
+
+    it('should toggle sort order', fakeAsync(() => {
+      flush();
+      component.sortOrder.set('asc');
+      component.toggleSortOrder();
+      expect(component.sortOrder()).toBe('desc');
+      component.toggleSortOrder();
+      expect(component.sortOrder()).toBe('asc');
+    }));
+  });
+
+  describe('Pagination', () => {
+    it('should set items per page', fakeAsync(() => {
+      flush();
+      component.currentPage.set(3);
+      component.setItemsPerPage(20);
+      expect(component.itemsPerPage()).toBe(20);
+      expect(component.currentPage()).toBe(1);
+    }));
+
+    it('should go to specific page', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000 },
+        { id: '2', name: 'Product 2', price: 2000 }
+      ];
+      component.itemsPerPage.set(1);
+      component.goToPage(1);
+      expect(component.currentPage()).toBe(1);
+      component.goToPage(2);
+      expect(component.currentPage()).toBe(2);
+    }));
+
+    it('should go to next page', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 15 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.itemsPerPage.set(10);
+      component.currentPage.set(1);
+      component.nextPage();
+      expect(component.currentPage()).toBe(2);
+    }));
+
+    it('should go to previous page', fakeAsync(() => {
+      flush();
+      component.currentPage.set(2);
+      component.previousPage();
+      expect(component.currentPage()).toBe(1);
+      component.previousPage();
+      expect(component.currentPage()).toBe(1);
+    }));
+  });
+
+  describe('Product Image', () => {
+    it('should get product image', fakeAsync(() => {
+      flush();
+      const productWithImage = { id: '1', name: 'Product 1', price: 1000, image: 'image.jpg' };
+      expect(component.getProductImage(productWithImage)).toBe('image.jpg');
+      
+      const productWithoutImage = { id: '2', name: 'Product 2', price: 2000 };
+      expect(component.getProductImage(productWithoutImage)).toBe(component.defaultImage);
+    }));
+  });
+
+  describe('Currency and Price', () => {
+    it('should get currency symbol', fakeAsync(() => {
+      flush();
+      localStorage.setItem('userCountry', 'CO');
+      fixture.detectChanges();
+      expect(component.currencySymbol()).toBe('$');
+      
+      localStorage.setItem('userCountry', 'PE');
+      fixture.detectChanges();
+      expect(component.currencySymbol()).toBe('S/');
+    }));
+
+    it('should get converted price', fakeAsync(() => {
+      flush();
+      const product = { id: '1', name: 'Product 1', price: 1000 };
+      localStorage.setItem('userCountry', 'CO');
+      expect(component.getConvertedPrice(product)).toBe(1000);
+      
+      localStorage.setItem('userCountry', 'PE');
+      expect(component.getConvertedPrice(product)).toBeGreaterThan(1000);
+    }));
+  });
+
+  describe('Confirm Modal', () => {
+    it('should open confirm modal', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.patchValue({ region: 'Norte', quarter: 'Q1' });
+      const product = { id: '1', name: 'Product 1', price: 1000, goal: 10 };
+      component.products = [product];
+      component.openConfirm();
+      expect(component.showConfirmModal).toBe(true);
+    }));
+
+    it('should cancel confirm modal', fakeAsync(() => {
+      flush();
+      component.showConfirmModal = true;
+      component.cancelConfirm();
+      expect(component.showConfirmModal).toBe(false);
+    }));
+  });
+
+  describe('Form Validation', () => {
+    it('should clear error', fakeAsync(() => {
+      flush();
+      component.formErrors.set({ region: 'error', quarter: 'error' });
+      component.clearError('region');
+      expect(component.formErrors()['region']).toBeUndefined();
+      expect(component.formErrors()['quarter']).toBe('error');
+    }));
+
+    it('should validate field', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.get('region')?.markAsTouched();
+      component.salesPlanForm.get('region')?.setValue('');
+      component.validateField('region');
+      expect(component.formErrors()['region']).toBe('fieldRequired');
+      
+      component.salesPlanForm.get('region')?.setValue('Norte');
+      component.validateField('region');
+      expect(component.formErrors()['region']).toBeUndefined();
+    }));
+  });
+
+  describe('Total Goal', () => {
+    it('should handle total goal change', fakeAsync(() => {
+      flush();
+      component.onTotalGoalChange('1000000');
+      expect(component.salesPlanForm.get('totalGoal')?.value).toBe('1000000');
+    }));
+  });
+
 });
