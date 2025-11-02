@@ -180,6 +180,15 @@ describe('SalesPlan', () => {
       expect(component.isProductSelected(product)).toBe(true);
     }));
 
+    it('should deselect product when selecting again', fakeAsync(() => {
+      flush();
+      const product = { id: '1', name: 'Product 1', price: 1000 };
+      component.selectProduct(product);
+      expect(component.isProductSelected(product)).toBe(true);
+      component.selectProduct(product);
+      expect(component.isProductSelected(product)).toBe(false);
+    }));
+
     it('should get selected products text', fakeAsync(() => {
       flush();
       expect(component.getSelectedProductsText()).toBe('select_products');
@@ -204,6 +213,52 @@ describe('SalesPlan', () => {
       expect(component.showGoalModal).toBe(false);
       expect(component.currentProduct).toBeNull();
       expect(component.goalValue).toBe('');
+    }));
+
+    it('should set product goal', fakeAsync(() => {
+      flush();
+      const product = { id: '1', name: 'Product 1', price: 1000 };
+      const mockEvent = { stopPropagation: jasmine.createSpy('stopPropagation') } as any;
+      component.setProductGoal(product, mockEvent);
+      expect(component.currentProduct).toBe(product);
+      expect(component.showGoalModal).toBe(true);
+      expect(mockEvent.stopPropagation).toHaveBeenCalled();
+    }));
+
+    it('should set product goal with existing goal', fakeAsync(() => {
+      flush();
+      const product = { id: '1', name: 'Product 1', price: 1000, goal: 50 };
+      const mockEvent = { stopPropagation: jasmine.createSpy('stopPropagation') } as any;
+      component.setProductGoal(product, mockEvent);
+      expect(component.goalValue).toBe('50');
+    }));
+
+    it('should save goal', fakeAsync(() => {
+      flush();
+      const product: any = { id: '1', name: 'Product 1', price: 1000 };
+      component.currentProduct = product;
+      component.goalValue = '100';
+      component.saveGoal();
+      expect(product.goal).toBe(100);
+      expect(component.showGoalModal).toBe(false);
+    }));
+
+    it('should not save goal with invalid value', fakeAsync(() => {
+      flush();
+      const product: any = { id: '1', name: 'Product 1', price: 1000 };
+      component.currentProduct = product;
+      component.goalValue = '0';
+      component.saveGoal();
+      expect(product.goal).toBeUndefined();
+    }));
+
+    it('should not save goal with empty value', fakeAsync(() => {
+      flush();
+      const product: any = { id: '1', name: 'Product 1', price: 1000 };
+      component.currentProduct = product;
+      component.goalValue = '';
+      component.saveGoal();
+      expect(product.goal).toBeUndefined();
     }));
   });
 
@@ -267,6 +322,20 @@ describe('SalesPlan', () => {
       expect(component.currentPage()).toBe(2);
     }));
 
+    it('should not go to page out of range', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000 },
+        { id: '2', name: 'Product 2', price: 2000 }
+      ];
+      component.itemsPerPage.set(1);
+      component.currentPage.set(1);
+      component.goToPage(0);
+      expect(component.currentPage()).toBe(1);
+      component.goToPage(10);
+      expect(component.currentPage()).toBe(1);
+    }));
+
     it('should go to next page', fakeAsync(() => {
       flush();
       component.products = Array.from({ length: 15 }, (_, i) => ({
@@ -278,6 +347,19 @@ describe('SalesPlan', () => {
       component.currentPage.set(1);
       component.nextPage();
       expect(component.currentPage()).toBe(2);
+    }));
+
+    it('should not go to next page if already on last page', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 10 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.itemsPerPage.set(10);
+      component.currentPage.set(1);
+      component.nextPage();
+      expect(component.currentPage()).toBe(1);
     }));
 
     it('should go to previous page', fakeAsync(() => {
@@ -298,6 +380,13 @@ describe('SalesPlan', () => {
       
       const productWithoutImage = { id: '2', name: 'Product 2', price: 2000 };
       expect(component.getProductImage(productWithoutImage)).toBe(component.defaultImage);
+    }));
+
+    it('should handle image error', fakeAsync(() => {
+      flush();
+      const mockEvent = { target: { src: '' } };
+      component.onImageError(mockEvent, { id: '1', name: 'Product 1', price: 1000 });
+      expect(mockEvent.target.src).toBe(component.defaultImage);
     }));
   });
 
@@ -321,6 +410,14 @@ describe('SalesPlan', () => {
       component.products = [product];
       component.openConfirm();
       expect(component.showConfirmModal).toBe(true);
+    }));
+
+    it('should not open confirm modal if form is invalid', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.patchValue({ region: '', quarter: '' });
+      component.products = [];
+      component.openConfirm();
+      expect(component.showConfirmModal).toBe(false);
     }));
 
     it('should cancel confirm modal', fakeAsync(() => {
@@ -358,6 +455,110 @@ describe('SalesPlan', () => {
       flush();
       component.onTotalGoalChange('1000000');
       expect(component.salesPlanForm.get('totalGoal')?.value).toBe('1000000');
+    }));
+
+    it('should handle total goal change with currency symbol', fakeAsync(() => {
+      flush();
+      localStorage.setItem('userCountry', 'CO');
+      component.onTotalGoalChange('$ 1,000,000');
+      expect(component.salesPlanForm.get('totalGoal')?.value).toBe('$ 1,000,000');
+    }));
+  });
+
+  describe('Computed Properties', () => {
+    it('should compute planned products', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 },
+        { id: '2', name: 'Product 2', price: 2000 },
+        { id: '3', name: 'Product 3', price: 3000, goal: 20 }
+      ];
+      const planned = component.plannedProducts();
+      expect(planned.length).toBe(2);
+      expect(planned[0].id).toBe('1');
+      expect(planned[1].id).toBe('3');
+    }));
+
+    it('should compute filtered products', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Paracetamol', price: 1000 },
+        { id: '2', name: 'Ibuprofeno', price: 2000 },
+        { id: '3', name: 'Aspirina', price: 3000 }
+      ];
+      component.productSearchFilter.set('Paracetamol');
+      const filtered = component.filteredProducts();
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].name).toBe('Paracetamol');
+    }));
+
+    it('should compute pagination info', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 25 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.itemsPerPage.set(10);
+      component.currentPage.set(2);
+      const info = component.paginationInfo();
+      expect(info.total).toBe(25);
+      expect(info.current).toBe(2);
+      expect(info.totalPages).toBe(3);
+      expect(info.startItem).toBe(11);
+      expect(info.endItem).toBe(20);
+    }));
+
+    it('should compute isFormValid', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.patchValue({ region: 'Norte', quarter: 'Q1' });
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      tick();
+      expect(component.isFormValid()).toBe(true);
+    }));
+
+    it('should compute isFormValid as false when missing data', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.patchValue({ region: '', quarter: '' });
+      component.products = [];
+      tick();
+      expect(component.isFormValid()).toBe(false);
+    }));
+  });
+
+  describe('Error Messages', () => {
+    it('should get error message', fakeAsync(() => {
+      flush();
+      component.formErrors.set({ region: 'fieldRequired' });
+      const message = component.getErrorMessage('region');
+      expect(message).toBeDefined();
+    }));
+
+    it('should return empty string when no error', fakeAsync(() => {
+      flush();
+      const message = component.getErrorMessage('region');
+      expect(message).toBe('');
+    }));
+  });
+
+  describe('Create Sales Plan', () => {
+    it('should not create sales plan if form is invalid', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.patchValue({ region: '', quarter: '' });
+      component.createSalesPlan();
+      expect(offerService.createSalesPlan).not.toHaveBeenCalled();
+    }));
+  });
+
+  describe('Load Products Error Handling', () => {
+    it('should handle error loading products', fakeAsync(() => {
+      flush();
+      productsService.getAvailableProducts.and.returnValue(throwError(() => new Error('Error')));
+      component.products = [];
+      tick();
+      expect(component.products).toEqual([]);
     }));
   });
 
