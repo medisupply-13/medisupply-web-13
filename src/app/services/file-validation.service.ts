@@ -716,11 +716,10 @@ export class FileValidationService {
 
   generateTemplateCSV(): string {
     const headers = this.requiredFields.join(',');
-    const sampleData = [
-      'SYNC-001,Producto Síncrono 1,Descripción síncrona 1,1000,Categoría Síncrona,1,unidad',
-      'SYNC-002,Producto Síncrono 2,Descripción síncrona 2,2000,Categoría Síncrona,2,kg',
-      'SYNC-003,Producto Síncrono 3,Descripción síncrona 3,3000,Categoría Síncrona,3,litro'
-    ].join('\n');
+    // Plantilla con UN ejemplo completo con todos los campos prellenados como referencia
+    // Campos: sku, name, value, category_name, quantity, warehouse_id (6 campos total)
+    // Este método se usa como fallback cuando no se pueden obtener datos del backend
+    const sampleData = 'EJEMPLO-001,Producto de Ejemplo,5000,Categoría Ejemplo,50,1';
     
     return `${headers}\n${sampleData}`;
   }
@@ -745,17 +744,31 @@ export class FileValidationService {
             console.log('✅ FileValidationService: Productos encontrados:', response.products.length);
             console.log('📦 FileValidationService: Primeros productos:', response.products.slice(0, 3));
             
-            // Usar los primeros 3 productos reales como ejemplos
-            const examples = response.products.slice(0, 3).map(product => {
-              console.log('🔧 FileValidationService: Procesando producto:', product);
-              const csvLine = `${product.sku},${product.name},${product.name} - Descripción,${product.value},${product.category_name},${product.total_quantity},unidad`;
-              console.log('📝 FileValidationService: Línea CSV generada:', csvLine);
-              return csvLine;
-            });
+            // Usar el PRIMER producto real como ejemplo completo con todos los campos prellenados
+            // Campos: sku, name, value, category_name, quantity, warehouse_id (6 campos total)
+            const firstProduct = response.products[0];
+            console.log('🔧 FileValidationService: Procesando producto ejemplo:', firstProduct);
             
-            const sampleData = examples.join('\n');
+            // Prellenar todos los campos con datos del producto real como ejemplo
+            // Asegurar que todos los campos tengan valores de ejemplo, incluso si el producto no los tiene
+            const sampleData = [
+              firstProduct.sku || 'EJEMPLO-001',
+              firstProduct.name || 'Producto Ejemplo',
+              firstProduct.value != null ? String(firstProduct.value) : '1000',
+              firstProduct.category_name || 'Categoría Ejemplo',
+              firstProduct.total_quantity != null ? String(firstProduct.total_quantity) : '10',
+              '1' // warehouse_id de ejemplo
+            ].join(',');
+            console.log('📝 FileValidationService: Línea CSV generada (ejemplo completo):', sampleData);
+            console.log('📝 FileValidationService: Valores individuales:', {
+              sku: firstProduct.sku || 'EJEMPLO-001',
+              name: firstProduct.name || 'Producto Ejemplo',
+              value: firstProduct.value != null ? String(firstProduct.value) : '1000',
+              category: firstProduct.category_name || 'Categoría Ejemplo',
+              quantity: firstProduct.total_quantity != null ? String(firstProduct.total_quantity) : '10'
+            });
             const finalCsv = `${headers}\n${sampleData}`;
-            console.log('📄 FileValidationService: CSV final generado:', finalCsv);
+            console.log('📄 FileValidationService: CSV final generado (solo SKUs prellenados):', finalCsv);
             resolve(finalCsv);
           } else {
             console.log('⚠️ FileValidationService: No hay productos o respuesta inválida');
@@ -763,13 +776,9 @@ export class FileValidationService {
             console.log('📊 FileValidationService: Array.isArray:', Array.isArray(response?.products));
             console.log('📊 FileValidationService: Length:', response?.products?.length);
             
-            // Fallback a datos de ejemplo si no hay productos
-            const fallbackData = [
-              'FALLBACK-001,Producto Fallback 1,Descripción fallback 1,1000,Categoría Fallback,1,unidad',
-              'FALLBACK-002,Producto Fallback 2,Descripción fallback 2,2000,Categoría Fallback,2,kg',
-              'FALLBACK-003,Producto Fallback 3,Descripción fallback 3,3000,Categoría Fallback,3,litro'
-            ].join('\n');
-            console.log('🔄 FileValidationService: Usando datos de fallback (sin productos del backend)');
+            // Fallback a un solo dato de ejemplo si no hay productos (con todos los campos)
+            const fallbackData = 'FALLBACK-001,Producto Ejemplo,1000,Categoría Ejemplo,10,1';
+            console.log('🔄 FileValidationService: Usando datos de fallback (sin productos del backend) - solo SKUs');
             resolve(`${headers}\n${fallbackData}`);
           }
         },
@@ -782,13 +791,9 @@ export class FileValidationService {
             url: error.url
           });
           
-          // Fallback a datos de ejemplo en caso de error
-          const fallbackData = [
-            'ERROR-001,Producto Error 1,Descripción error 1,1000,Categoría Error,1,unidad',
-            'ERROR-002,Producto Error 2,Descripción error 2,2000,Categoría Error,2,kg',
-            'ERROR-003,Producto Error 3,Descripción error 3,3000,Categoría Error,3,litro'
-          ].join('\n');
-          console.log('🔄 FileValidationService: Usando datos de fallback por error de conexión');
+          // Fallback a un solo dato de ejemplo en caso de error (con todos los campos)
+          const fallbackData = 'ERROR-001,Producto Ejemplo,1000,Categoría Ejemplo,10,1';
+          console.log('🔄 FileValidationService: Usando datos de fallback por error de conexión - solo SKUs');
           resolve(`${headers}\n${fallbackData}`);
         }
       });
