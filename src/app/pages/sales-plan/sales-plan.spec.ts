@@ -298,6 +298,36 @@ describe('SalesPlan', () => {
       component.toggleSortOrder();
       expect(component.sortOrder()).toBe('asc');
     }));
+
+    it('should sort by name ascending', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Zebra', price: 1000 },
+        { id: '2', name: 'Apple', price: 1000 },
+        { id: '3', name: 'Banana', price: 1000 }
+      ];
+      component.setSortBy('name');
+      component.sortOrder.set('asc');
+      const filtered = component.filteredProducts();
+      expect(filtered[0].name).toBe('Apple');
+      expect(filtered[1].name).toBe('Banana');
+      expect(filtered[2].name).toBe('Zebra');
+    }));
+
+    it('should sort by popularity descending', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000 },
+        { id: '3', name: 'Product 3', price: 1000 },
+        { id: '2', name: 'Product 2', price: 1000 }
+      ];
+      component.setSortBy('popularity');
+      component.sortOrder.set('desc');
+      const filtered = component.filteredProducts();
+      expect(filtered[0].id).toBe('3');
+      expect(filtered[1].id).toBe('2');
+      expect(filtered[2].id).toBe('1');
+    }));
   });
 
   describe('Pagination', () => {
@@ -307,6 +337,16 @@ describe('SalesPlan', () => {
       component.setItemsPerPage(20);
       expect(component.itemsPerPage()).toBe(20);
       expect(component.currentPage()).toBe(1);
+    }));
+
+    it('should set items per page to different values', fakeAsync(() => {
+      flush();
+      component.setItemsPerPage(5);
+      expect(component.itemsPerPage()).toBe(5);
+      component.setItemsPerPage(15);
+      expect(component.itemsPerPage()).toBe(15);
+      component.setItemsPerPage(25);
+      expect(component.itemsPerPage()).toBe(25);
     }));
 
     it('should go to specific page', fakeAsync(() => {
@@ -370,6 +410,22 @@ describe('SalesPlan', () => {
       component.previousPage();
       expect(component.currentPage()).toBe(1);
     }));
+
+    it('should handle pagination with different items per page', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 50 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.setItemsPerPage(5);
+      const info1 = component.paginationInfo();
+      expect(info1.totalPages).toBe(10);
+      
+      component.setItemsPerPage(10);
+      const info2 = component.paginationInfo();
+      expect(info2.totalPages).toBe(5);
+    }));
   });
 
   describe('Product Image', () => {
@@ -399,6 +455,27 @@ describe('SalesPlan', () => {
       
       localStorage.setItem('userCountry', 'PE');
       expect(component.getConvertedPrice(product)).toBeGreaterThan(1000);
+    }));
+
+    it('should convert price for EC', fakeAsync(() => {
+      flush();
+      const product = { id: '1', name: 'Product 1', price: 1000 };
+      localStorage.setItem('userCountry', 'EC');
+      expect(component.getConvertedPrice(product)).toBe(1000);
+    }));
+
+    it('should convert price for MX', fakeAsync(() => {
+      flush();
+      const product = { id: '1', name: 'Product 1', price: 1000 };
+      localStorage.setItem('userCountry', 'MX');
+      expect(component.getConvertedPrice(product)).toBeGreaterThan(1000);
+    }));
+
+    it('should handle default country conversion', fakeAsync(() => {
+      flush();
+      const product = { id: '1', name: 'Product 1', price: 1000 };
+      localStorage.removeItem('userCountry');
+      expect(component.getConvertedPrice(product)).toBe(1000);
     }));
   });
 
@@ -448,6 +525,33 @@ describe('SalesPlan', () => {
       component.validateField('region');
       expect(component.formErrors()['region']).toBeUndefined();
     }));
+
+    it('should validate quarter field', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.get('quarter')?.markAsTouched();
+      component.salesPlanForm.get('quarter')?.setValue('');
+      component.validateField('quarter');
+      expect(component.formErrors()['quarter']).toBe('fieldRequired');
+      
+      component.salesPlanForm.get('quarter')?.setValue('Q1');
+      component.validateField('quarter');
+      expect(component.formErrors()['quarter']).toBeUndefined();
+    }));
+
+    it('should not validate field if not touched', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.get('region')?.setValue('');
+      component.validateField('region');
+      expect(component.formErrors()['region']).toBeUndefined();
+    }));
+
+    it('should not validate field if valid', fakeAsync(() => {
+      flush();
+      component.salesPlanForm.get('region')?.markAsTouched();
+      component.salesPlanForm.get('region')?.setValue('Norte');
+      component.validateField('region');
+      expect(component.formErrors()['region']).toBeUndefined();
+    }));
   });
 
   describe('Total Goal', () => {
@@ -462,6 +566,20 @@ describe('SalesPlan', () => {
       localStorage.setItem('userCountry', 'CO');
       component.onTotalGoalChange('$ 1,000,000');
       expect(component.salesPlanForm.get('totalGoal')?.value).toBe('$ 1,000,000');
+    }));
+
+    it('should extract numeric value from total goal', fakeAsync(() => {
+      flush();
+      component.onTotalGoalChange('$ 1,000,000');
+      const manualValue = (component as any).manualGoalValue();
+      expect(manualValue).toBeGreaterThan(0);
+    }));
+
+    it('should handle total goal with PE currency', fakeAsync(() => {
+      flush();
+      localStorage.setItem('userCountry', 'PE');
+      component.onTotalGoalChange('S/ 1,000,000');
+      expect(component.salesPlanForm.get('totalGoal')?.value).toBe('S/ 1,000,000');
     }));
   });
 
@@ -531,6 +649,47 @@ describe('SalesPlan', () => {
       component.productSearchFilter.set('');
       const filtered = component.filteredProducts();
       expect(filtered.length).toBe(2);
+    }));
+
+    it('should compute filtered products sorted by price descending', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000 },
+        { id: '2', name: 'Product 2', price: 3000 },
+        { id: '3', name: 'Product 3', price: 2000 }
+      ];
+      component.setSortBy('price');
+      component.sortOrder.set('desc');
+      const filtered = component.filteredProducts();
+      expect(filtered[0].price).toBe(3000);
+      expect(filtered[1].price).toBe(2000);
+      expect(filtered[2].price).toBe(1000);
+    }));
+
+    it('should compute filtered products sorted by name descending', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Apple', price: 1000 },
+        { id: '2', name: 'Banana', price: 1000 },
+        { id: '3', name: 'Cherry', price: 1000 }
+      ];
+      component.setSortBy('name');
+      component.sortOrder.set('desc');
+      const filtered = component.filteredProducts();
+      expect(filtered[0].name).toBe('Cherry');
+      expect(filtered[1].name).toBe('Banana');
+      expect(filtered[2].name).toBe('Apple');
+    }));
+
+    it('should compute filtered products with case insensitive filter', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Paracetamol', price: 1000 },
+        { id: '2', name: 'Ibuprofeno', price: 2000 }
+      ];
+      component.productSearchFilter.set('paracetamol');
+      const filtered = component.filteredProducts();
+      expect(filtered.length).toBe(1);
     }));
 
     it('should compute pagination info', fakeAsync(() => {
@@ -646,6 +805,33 @@ describe('SalesPlan', () => {
         { id: '1', name: 'Product 1', price: 1000, goal: 10 }
       ];
       (component as any).manualGoalValue.set(null);
+      expect(component.isGoalValid()).toBe(true);
+    }));
+
+    it('should compute isGoalValid when calculated value is zero', fakeAsync(() => {
+      flush();
+      component.products = [];
+      (component as any).manualGoalValue.set(1000);
+      expect(component.isGoalValid()).toBe(true);
+    }));
+
+    it('should compute isGoalValid at lower boundary', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      const calculated = component.calculatedTotalValue();
+      (component as any).manualGoalValue.set(calculated * 0.90); // Exactamente 10% menos
+      expect(component.isGoalValid()).toBe(true);
+    }));
+
+    it('should compute isGoalValid at upper boundary', fakeAsync(() => {
+      flush();
+      component.products = [
+        { id: '1', name: 'Product 1', price: 1000, goal: 10 }
+      ];
+      const calculated = component.calculatedTotalValue();
+      (component as any).manualGoalValue.set(calculated * 1.20); // Exactamente 20% más
       expect(component.isGoalValid()).toBe(true);
     }));
   });
@@ -800,6 +986,68 @@ describe('SalesPlan', () => {
       component.saveGoal();
       tick();
       expect(component.salesPlanForm.get('totalGoal')?.value).toBeDefined();
+    }));
+
+    it('should not add duplicate product to selectedProducts', fakeAsync(() => {
+      flush();
+      const product: any = { id: '1', name: 'Product 1', price: 1000 };
+      component.selectedProducts = [product];
+      component.currentProduct = product;
+      component.goalValue = '100';
+      component.saveGoal();
+      expect(component.selectedProducts.length).toBe(1);
+    }));
+
+    it('should update selectedProductsVersion when goal is saved', fakeAsync(() => {
+      flush();
+      const product: any = { id: '1', name: 'Product 1', price: 1000 };
+      const initialVersion = (component as any).selectedProductsVersion();
+      component.currentProduct = product;
+      component.goalValue = '100';
+      component.saveGoal();
+      expect((component as any).selectedProductsVersion()).toBeGreaterThan(initialVersion);
+    }));
+  });
+
+  describe('Visible Pages Computation', () => {
+    it('should compute visiblePages for current page near start', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 100 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.itemsPerPage.set(10);
+      component.currentPage.set(1);
+      const pages = component.visiblePages();
+      expect(pages.length).toBeGreaterThan(0);
+      expect(pages[0]).toBe(1);
+    }));
+
+    it('should compute visiblePages for current page near end', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 100 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.itemsPerPage.set(10);
+      component.currentPage.set(10);
+      const pages = component.visiblePages();
+      expect(pages.length).toBeGreaterThan(0);
+    }));
+
+    it('should compute visiblePages for middle page', fakeAsync(() => {
+      flush();
+      component.products = Array.from({ length: 100 }, (_, i) => ({
+        id: String(i + 1),
+        name: `Product ${i + 1}`,
+        price: 1000
+      }));
+      component.itemsPerPage.set(10);
+      component.currentPage.set(5);
+      const pages = component.visiblePages();
+      expect(pages.length).toBeGreaterThan(0);
     }));
   });
 
