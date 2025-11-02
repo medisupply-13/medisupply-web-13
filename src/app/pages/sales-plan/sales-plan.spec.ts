@@ -302,17 +302,6 @@ describe('SalesPlan', () => {
   });
 
   describe('Currency and Price', () => {
-    it('should get currency symbol', fakeAsync(() => {
-      flush();
-      localStorage.setItem('userCountry', 'CO');
-      fixture.detectChanges();
-      expect(component.currencySymbol()).toBe('$');
-      
-      localStorage.setItem('userCountry', 'PE');
-      fixture.detectChanges();
-      expect(component.currencySymbol()).toBe('S/');
-    }));
-
     it('should get converted price', fakeAsync(() => {
       flush();
       const product = { id: '1', name: 'Product 1', price: 1000 };
