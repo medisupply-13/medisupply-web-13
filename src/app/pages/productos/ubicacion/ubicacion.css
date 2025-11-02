@@ -369,13 +369,28 @@
   color: #2e7d32;
 }
 
+.availability-badge.low-stock {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
 .availability-badge.unavailable {
   background: #ffebee;
   color: #c62828;
 }
 
+.availability-badge.unknown {
+  background: #f5f5f5;
+  color: #666;
+}
+
 .availability-badge mat-icon {
   font-size: 18px;
+}
+
+.stock-text {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* Acciones */

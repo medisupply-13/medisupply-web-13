@@ -18,6 +18,7 @@ import { PageHeader } from '../../shared/page-header/page-header';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { currentLangSignal, loadTranslations } from '../../shared/lang/lang-store';
 import { CustomSelect } from '../../shared/custom-select/custom-select';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -43,6 +44,7 @@ export class RegionalSettings {
   private readonly appRef = inject(ApplicationRef);
   public readonly currentLangSignal = currentLangSignal;
   pageTitle = 'pageRegionTitle';
+  appVersion = environment.version;
 
   languageOptions = [
     { value: 'es-CO', labelKey: 'language_es_co' },

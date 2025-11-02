@@ -1,5 +1,5 @@
 .sales-plan-container {
-  max-width: 600px;
+  max-width: 700px;
   margin: 0 auto;
   padding: 24px;
 }
@@ -62,7 +62,7 @@
   border-radius: 16px;
   padding: 20px;
   margin-top: 12px;
-  box-shadow: 
+  box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.06),
     inset 0 1px 2px rgba(255, 255, 255, 0.8);
   transform: perspective(1000px) rotateX(1deg);
@@ -71,7 +71,7 @@
 
 .product-search-container:hover {
   transform: perspective(1000px) rotateX(0deg);
-  box-shadow: 
+  box-shadow:
     0 6px 24px rgba(0, 0, 0, 0.1),
     inset 0 1px 2px rgba(255, 255, 255, 0.8);
 }
@@ -118,7 +118,7 @@
   gap: 16px;
   max-height: 500px;
   overflow-y: auto;
-  box-shadow: 
+  box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.08),
     0 2px 8px rgba(0, 0, 0, 0.04);
   transform: perspective(1000px) rotateX(-1deg);
@@ -127,7 +127,7 @@
 
 .products-grid:hover {
   transform: perspective(1000px) rotateX(0deg);
-  box-shadow: 
+  box-shadow:
     0 6px 28px rgba(0, 0, 0, 0.12),
     0 4px 12px rgba(0, 0, 0, 0.08);
 }
@@ -169,15 +169,51 @@
   align-items: center;
   gap: 20px;
   min-height: 90px;
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.08),
     inset 0 1px 2px rgba(255, 255, 255, 0.8);
   transform: perspective(1000px) rotateY(-1deg);
 }
 
+/* Franja verde cuando hay meta establecida */
+.product-card.has-goal {
+  border-color: #b7e2c1;
+  background: linear-gradient(135deg, #f4fbf6 0%, #ffffff 100%);
+}
+
+.goal-ribbon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: #e6f7e9; /* verde claro */
+  border-top: 1px solid #c6e9cc;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  z-index: 1;
+}
+
+.goal-ribbon.bottom {
+  bottom: 0;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.goal-text {
+  color: #1a7f37; /* verde oscuro accesible */
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Asegurar espacio para la franja inferior cuando exista meta */
+.product-card.has-goal {
+  padding-bottom: 48px; /* 20 base + 28 franja */
+}
+
 .product-card:hover {
   border-color: #1976d2;
-  box-shadow: 
+  box-shadow:
     0 6px 20px rgba(25, 118, 210, 0.2),
     inset 0 1px 2px rgba(255, 255, 255, 0.8);
   transform: perspective(1000px) rotateY(0deg) translateY(-2px);
@@ -186,7 +222,7 @@
 .product-card.selected {
   border-color: #1976d2;
   background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-  box-shadow: 
+  box-shadow:
     0 8px 24px rgba(25, 118, 210, 0.3),
     inset 0 2px 4px rgba(255, 255, 255, 0.8);
   transform: perspective(1000px) rotateY(0deg) translateY(-1px);
@@ -336,15 +372,15 @@
   .sales-plan-container {
     padding: 16px;
   }
-  
+
   .form-container {
     padding: 24px 16px;
   }
-  
+
   .action-buttons {
     flex-direction: column;
   }
-  
+
   .create-button,
   .cancel-button {
     width: 100%;
@@ -494,7 +530,7 @@ mat-divider {
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   border-radius: 16px;
   border: 1px solid #e0e0e0;
-  box-shadow: 
+  box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.08),
     0 2px 8px rgba(0, 0, 0, 0.04);
   transform: perspective(1000px) rotateX(2deg);
@@ -503,7 +539,7 @@ mat-divider {
 
 .product-controls-container:hover {
   transform: perspective(1000px) rotateX(0deg);
-  box-shadow: 
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.12),
     0 4px 16px rgba(0, 0, 0, 0.08);
 }
@@ -529,7 +565,6 @@ mat-divider {
 
 .sort-controls {
   display: flex;
-  align-items: center;
   gap: 16px;
   flex: 0 0 auto;
 }
@@ -574,8 +609,8 @@ mat-divider {
 }
 
 .items-field {
-  min-width: 140px;
-  max-width: 180px;
+  min-width: 180px;
+  max-width: 260px;
 }
 
 .items-field .mat-form-field-wrapper {
@@ -588,13 +623,13 @@ mat-divider {
     gap: 20px;
     padding: 16px 20px;
   }
-  
+
   .sort-field,
   .items-field {
     min-width: 120px;
     max-width: 160px;
   }
-  
+
   .sort-order-button {
     width: 44px;
     height: 44px;
@@ -607,24 +642,24 @@ mat-divider {
     gap: 20px;
     padding: 16px 20px;
   }
-  
+
   .sort-controls,
   .items-per-page {
     justify-content: center;
     width: 100%;
   }
-  
+
   .sort-field,
   .items-field {
     min-width: 140px;
     max-width: 200px;
   }
-  
+
   .results-info {
     padding: 10px 16px;
     max-width: 250px;
   }
-  
+
   .results-text {
     font-size: 12px;
   }
@@ -662,12 +697,13 @@ mat-divider {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px 24px;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   border-radius: 16px;
   border: 1px solid #e0e0e0;
-  margin-top: 24px;
-  box-shadow: 
+  margin: 24px auto 0 auto;
+  width: 100%;
+  position: relative;
+  box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.08),
     0 2px 8px rgba(0, 0, 0, 0.04);
   transform: perspective(1000px) rotateX(-1deg);
@@ -676,7 +712,7 @@ mat-divider {
 
 .pagination-controls:hover {
   transform: perspective(1000px) rotateX(0deg);
-  box-shadow: 
+  box-shadow:
     0 6px 28px rgba(0, 0, 0, 0.12),
     0 4px 12px rgba(0, 0, 0, 0.08);
 }
@@ -694,9 +730,10 @@ mat-divider {
 }
 
 .pagination-buttons {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
+  width: 100%;
 }
 
 .pagination-button {
@@ -726,10 +763,13 @@ mat-divider {
   display: flex;
   gap: 8px;
   margin: 0 16px;
+  justify-content: center;
+  width: 100%;
 }
 
 .page-button {
   min-width: 44px;
+  width: 44px;
   height: 44px;
   border-radius: 50%;
   color: #666;
@@ -739,6 +779,23 @@ mat-divider {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transform: perspective(1000px) rotateY(1deg);
   transition: all 0.3s ease;
+}
+
+/* Botones anterior/siguiente pegados a bordes para equilibrio visual */
+.pagination-buttons > .pagination-button:first-child {
+  position: absolute;
+  left: 0;
+}
+.pagination-buttons > .pagination-button:last-child {
+  position: absolute;
+  right: 0;
+}
+
+.page-button[disabled] {
+  background: transparent;
+  border-color: transparent;
+  color: #b0b0b0;
+  box-shadow: none;
 }
 
 .page-button:hover {

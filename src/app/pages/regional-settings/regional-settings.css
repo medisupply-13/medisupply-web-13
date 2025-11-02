@@ -13,3 +13,18 @@
   justify-content: center;
   margin-top: 34px;
 }
+
+.version-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 80px;
+  padding: 20px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.version-text {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+  font-weight: 400;
+}

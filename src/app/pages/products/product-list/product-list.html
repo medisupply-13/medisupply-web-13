@@ -161,12 +161,18 @@
   <!-- Tabla de productos -->
   <mat-card class="products-table-card">
     <mat-card-content>
-      <div class="table-container">
-        <table mat-table [dataSource]="paginatedProducts()" class="products-table">
+      <!-- Indicador de carga -->
+      <div class="loading-container" *ngIf="isLoading()">
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        <p class="loading-text">{{ 'loadingProducts' | translate }}</p>
+      </div>
+      
+      <div class="table-container" *ngIf="!isLoading()">
+        <table mat-table [dataSource]="dataSource" matSort class="products-table">
           
           <!-- Columna SKU -->
           <ng-container matColumnDef="sku">
-            <th mat-header-cell *matHeaderCellDef>{{ 'productSkuColumn' | translate }}</th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="sku">{{ 'productSkuColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <div class="product-sku">
                 <strong>{{ product.sku }}</strong>
@@ -175,104 +181,66 @@
           </ng-container>
 
           <!-- Columna Nombre -->
-          <ng-container matColumnDef="nombre">
-            <th mat-header-cell *matHeaderCellDef>{{ 'productNameColumn' | translate }}</th>
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="name">{{ 'productNameColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <div class="product-name">
-                <strong>{{ product.nombre }}</strong>
+                <strong>{{ product.name }}</strong>
               </div>
             </td>
           </ng-container>
 
-          <!-- Columna Descripción -->
-          <ng-container matColumnDef="descripcion">
-            <th mat-header-cell *matHeaderCellDef>{{ 'productDescriptionColumn' | translate }}</th>
-            <td mat-cell *matCellDef="let product">
-              <div class="product-description">
-                {{ product.descripcion }}
-              </div>
-            </td>
-          </ng-container>
-
-          <!-- Columna Precio -->
-          <ng-container matColumnDef="precio">
-            <th mat-header-cell *matHeaderCellDef>{{ 'productPriceColumn' | translate }}</th>
+          <!-- Columna Valor -->
+          <ng-container matColumnDef="value">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="value">{{ 'productPriceColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <div class="product-price">
-                {{ formatPrice(product.precio) }}
+                {{ formatPrice(product.value) }}
               </div>
             </td>
           </ng-container>
+
 
           <!-- Columna Categoría -->
-          <ng-container matColumnDef="categoria">
-            <th mat-header-cell *matHeaderCellDef>{{ 'productCategoryColumn' | translate }}</th>
+          <ng-container matColumnDef="category_name">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="category_name">{{ 'productCategoryColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <mat-chip class="category-chip">
-                {{ product.categoria }}
+                {{ product.category_name }}
               </mat-chip>
             </td>
           </ng-container>
 
-          <!-- Columna Stock Mínimo -->
-          <ng-container matColumnDef="stock_minimo">
-            <th mat-header-cell *matHeaderCellDef>{{ 'productMinStockColumn' | translate }}</th>
+          <!-- Columna Stock Total -->
+          <ng-container matColumnDef="total_quantity">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header="total_quantity">{{ 'productTotalStockColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <div class="stock-info">
-                <span class="stock-value">{{ product.stock_minimo }}</span>
-                <span class="stock-unit">{{ product.unidad_medida }}</span>
+                <span class="stock-value">{{ product.total_quantity || 0 }}</span>
+                <span class="stock-unit">{{ 'unitsLabel' | translate }}</span>
               </div>
-            </td>
-          </ng-container>
-
-          <!-- Columna Unidad de Medida -->
-          <ng-container matColumnDef="unidad_medida">
-            <th mat-header-cell *matHeaderCellDef>{{ 'productUnitColumn' | translate }}</th>
-            <td mat-cell *matCellDef="let product">
-              <div class="unit-info">
-                {{ product.unidad_medida }}
-              </div>
-            </td>
-          </ng-container>
-
-          <!-- Columna Estado -->
-          <ng-container matColumnDef="estado">
-            <th mat-header-cell *matHeaderCellDef>{{ 'productStatusColumn' | translate }}</th>
-            <td mat-cell *matCellDef="let product">
-              <mat-chip 
-                [class]="product.estado === 'activo' ? 'status-active' : 'status-inactive'">
-                {{ product.estado === 'activo' ? ('statusActive' | translate) : ('statusInactive' | translate) }}
-              </mat-chip>
             </td>
           </ng-container>
 
           <!-- Columna Acciones -->
-          <ng-container matColumnDef="acciones">
+          <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef>{{ 'productActionsColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <div class="action-buttons">
                 <button 
                   mat-icon-button
-                  [matMenuTriggerFor]="menu"
-                  [attr.aria-label]="'productActionsAria' | translate">
-                  <mat-icon>more_vert</mat-icon>
+                  color="primary"
+                  (click)="editProduct(product)"
+                  [attr.aria-label]="'editProductAria' | translate">
+                  <mat-icon>edit</mat-icon>
                 </button>
-                
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item (click)="editProduct(product)">
-                    <mat-icon>edit</mat-icon>
-                    <span>{{ 'editProductAction' | translate }}</span>
-                  </button>
-                  <button mat-menu-item (click)="toggleProductStatus(product)">
-                    <mat-icon>{{ product.estado === 'activo' ? 'pause' : 'play_arrow' }}</mat-icon>
-                    <span>{{ product.estado === 'activo' ? ('deactivateProductAction' | translate) : ('activateProductAction' | translate) }}</span>
-                  </button>
-                  <mat-divider></mat-divider>
-                  <button mat-menu-item (click)="deleteProduct(product)" class="delete-action">
-                    <mat-icon>delete</mat-icon>
-                    <span>{{ 'deleteProductAction' | translate }}</span>
-                  </button>
-                </mat-menu>
+                <button 
+                  mat-icon-button
+                  color="warn"
+                  (click)="deleteProduct(product)"
+                  [attr.aria-label]="'deleteProductAria' | translate">
+                  <mat-icon>delete</mat-icon>
+                </button>
               </div>
             </td>
           </ng-container>
@@ -287,14 +255,12 @@
         *ngIf="totalProducts() > pageSize"
         [length]="totalProducts()"
         [pageSize]="pageSize"
-        [pageIndex]="pageIndex"
         [pageSizeOptions]="[5, 10, 25, 50]"
-        (page)="onPageChange($event)"
         [attr.aria-label]="'productPaginationAria' | translate">
       </mat-paginator>
 
       <!-- Mensaje cuando no hay productos -->
-      <div class="no-products" *ngIf="products().length === 0">
+      <div class="no-products" *ngIf="!isLoading() && products().length === 0">
         <mat-icon>inventory_2</mat-icon>
         <h3>{{ 'noProductsTitle' | translate }}</h3>
         <p>{{ 'noProductsMessage' | translate }}</p>
