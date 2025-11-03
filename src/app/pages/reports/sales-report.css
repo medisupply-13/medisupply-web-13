@@ -47,9 +47,39 @@
   text-align: left;
 }
 
+.period-info {
+  background: #f0f4ff;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.period-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e1e1e;
+  text-transform: capitalize;
+}
+
+.period-dates {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
 .chart {
   text-align: center;
   margin-top: 30px;
+}
+
+.chart-subtitle {
+  margin: -10px 0 20px 0;
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
 }
 
 .chart-container {

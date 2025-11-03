@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { StatusMessage } from '../../shared/status-message/status-message';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe'; 
 import { NgxChartsModule } from '@swimlane/ngx-charts';
+import { curveLinear } from 'd3-shape';
 import { SalesReportService, SalesReportRequest } from '../../services/sales-report.service';
 
 @Component({
@@ -23,6 +24,7 @@ export class SalesReport implements OnInit {
   messageType = signal<'success' | 'error'>('success');
   messageText = signal('');
   reportData = signal<any | null>(null);
+  curveLinear = curveLinear;
 
   constructor(private salesReportService: SalesReportService) {
     console.log('🏗️ SalesReport: Componente instanciado con servicio');
@@ -120,15 +122,104 @@ export class SalesReport implements OnInit {
     const data = this.reportData();
     if (!data || !data.grafico || !Array.isArray(data.grafico)) return [];
   
+    // Formatear los períodos según el tipo
+    const formattedSeries = data.grafico.map((item: { periodo: string; ventas: number }) => {
+      const formattedPeriod = this.formatPeriodLabel(item.periodo, data.period_type);
+      return {
+        name: formattedPeriod,
+        value: item.ventas,
+      };
+    });
+  
     return [
       {
         name: 'Ventas',
-        series: data.grafico.map((item: { periodo: string; ventas: number }) => ({
-          name: item.periodo,
-          value: item.ventas,
-        })),
+        series: formattedSeries,
       },
     ];
+  }
+
+  formatPeriodLabel(periodo: string, periodType: string): string {
+    // El período viene como "2025-10" (YYYY-MM) o similar
+    // Formatear según el tipo de período
+    if (!periodo) return periodo;
+
+    // Si el período ya viene formateado (ej: "2025-10"), convertirlo a formato legible
+    if (periodo.includes('-')) {
+      const parts = periodo.split('-');
+      if (parts.length >= 2) {
+        const year = parts[0];
+        const month = parseInt(parts[1], 10);
+        
+        const monthNames: Record<number, string> = {
+          1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
+          7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
+        };
+
+        if (periodType === 'anual' || periodType === 'semestral') {
+          // Mostrar mes y año: "Oct 2025"
+          return `${monthNames[month] || month} ${year}`;
+        } else if (periodType === 'trimestral' || periodType === 'bimestral') {
+          // Mostrar mes: "Oct"
+          return monthNames[month] || periodo;
+        }
+      }
+    }
+
+    return periodo;
+  }
+
+  getChartSubtitle(): string {
+    const data = this.reportData();
+    if (!data) return '';
+    
+    const periodType = data.period_type;
+    const periodLabels: Record<string, string> = {
+      'bimestral': 'Desglose por meses',
+      'trimestral': 'Desglose por meses',
+      'semestral': 'Desglose por meses',
+      'anual': 'Desglose por meses'
+    };
+
+    return periodLabels[periodType] || 'Desglose temporal';
+  }
+
+  getChartView(): [number, number] {
+    const data = this.reportData();
+    if (!data || !data.grafico || !Array.isArray(data.grafico)) {
+      return [800, 400];
+    }
+
+    // Ajustar el tamaño según la cantidad de datos para gráfica temporal
+    const dataLength = data.grafico.length;
+    const minWidth = 600;
+    const maxWidth = 1000;
+    const minHeight = 350;
+    const maxHeight = 450;
+    
+    // Calcular ancho: mínimo 600px, máximo 1000px, escala con cantidad de datos
+    // Para gráficas de línea temporal, necesitamos buen espacio horizontal
+    const width = Math.min(Math.max(minWidth, dataLength * 120), maxWidth);
+    
+    // Altura fija para mejor visualización de tendencias temporales
+    const height = Math.max(minHeight, Math.min(400, maxHeight));
+    
+    return [width, height];
+  }
+
+  getXAxisLabel(): string {
+    const data = this.reportData();
+    if (!data) return 'Período';
+    
+    const periodType = data.period_type;
+    const labels: Record<string, string> = {
+      'bimestral': 'Meses',
+      'trimestral': 'Meses',
+      'semestral': 'Meses',
+      'anual': 'Meses'
+    };
+
+    return labels[periodType] || 'Período';
   }
 
   private generatePeriodLabels(periodType: string, dataLength: number): string[] {
