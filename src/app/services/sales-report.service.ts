@@ -1,24 +1,31 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
+import { tap, catchError, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export interface SalesReportRequest {
   vendor_id: string;
   period: string;
-  start_date: string;
-  end_date: string;
 }
 
 export interface SalesReportResponse {
   data: {
-    ventasTotales: number;
-    productos: {
+    generated_at: string;
+    grafico: Array<{
+      periodo: string;
+      ventas: number;
+    }>;
+    pedidos: number;
+    period_type: string;
+    periodo: string;
+    productos: Array<{
       nombre: string;
       ventas: number;
-    }[];
-    grafico: number[];
+      cantidad: number;
+    }>;
+    vendor_id: string;
+    ventasTotales: number;
   };
   success: boolean;
 }
@@ -77,6 +84,40 @@ export class SalesReportService {
         console.error('📋 SalesReportService: Mensaje de error:', error.message || 'Sin mensaje');
         console.error('🔍 SalesReportService: Error completo:', error);
         console.error('❌ SalesReportService: ===== CONSULTA FALLIDA =====');
+        return throwError(() => error);
+      })
+    );
+  }
+
+  getVendors(): Observable<{ value: string; labelKey: string }[]> {
+    const url = `${this.api}reports/vendors`;
+    const startTime = performance.now();
+
+    console.log('🔍 SalesReportService: Solicitando vendors');
+    console.log('🌐 SalesReportService: URL completa:', url);
+
+    return this.http.get<{ data: Array<{ id: number; name: string; active: boolean; email: string; region: string }>; success: boolean }>(url).pipe(
+      tap((response) => {
+        const endTime = performance.now();
+        console.log('✅ SalesReportService: Vendors recibidos en', Math.round((endTime - startTime) * 100) / 100, 'ms');
+        console.log('📋 SalesReportService: Respuesta completa:', JSON.stringify(response, null, 2));
+      }),
+      map((response) => {
+        if (!response?.data || !Array.isArray(response.data)) {
+          console.error('❌ SalesReportService: Respuesta de vendors no tiene data o no es un arreglo:', response);
+          return [] as { value: string; labelKey: string }[];
+        }
+        const vendors = response.data
+          .filter(v => v.active !== false) // Filtrar solo vendors activos
+          .map((v) => ({
+            value: String(v.id),
+            labelKey: v.name
+          }));
+        console.log('🔄 SalesReportService: Vendors mapeados:', vendors);
+        return vendors;
+      }),
+      catchError((error) => {
+        console.error('❌ SalesReportService: Error obteniendo vendors:', error);
         return throwError(() => error);
       })
     );

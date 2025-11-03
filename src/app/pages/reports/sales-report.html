@@ -3,7 +3,7 @@
 <div class="report-container">
   <app-custom-select
     [labelKey]="'salesReportVendorLabel'"
-    [options]="vendedores"
+    [options]="vendedores()"
     [model]="vendedor"
     [required]="true"
     (modelChange)="onSelectionChange()"

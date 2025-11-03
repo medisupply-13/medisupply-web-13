@@ -1,4 +1,4 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PageHeader } from '../../shared/page-header/page-header';
 import { CustomSelect } from '../../shared/custom-select/custom-select';
@@ -15,7 +15,7 @@ import { SalesReportService, SalesReportRequest } from '../../services/sales-rep
   templateUrl: './sales-report.html',
   styleUrls: ['./sales-report.css'],
 })
-export class SalesReport {
+export class SalesReport implements OnInit {
   pageTitle = 'generateSalesReport';
   vendedor = signal<string>('');
   periodo = signal<string>('');
@@ -74,13 +74,7 @@ export class SalesReport {
     return symbols[country] || 'USD';
   });
 
-  vendedores = [
-    { value: 'v1', labelKey: 'salesReportVendor1' },
-    { value: 'v2', labelKey: 'salesReportVendor2' },
-    { value: 'v3', labelKey: 'salesReportVendor3' },
-    { value: 'v4', labelKey: 'salesReportVendor4' },
-    { value: 'v5', labelKey: 'salesReportVendor5' },
-  ];
+  vendedores = signal<{ value: string; labelKey: string }[]>([]);
 
   periodos = [
     { value: 'bimestral', labelKey: 'salesReportPeriodBimestral' },
@@ -93,6 +87,28 @@ export class SalesReport {
     return !this.vendedor() || !this.periodo();
   }
 
+  ngOnInit(): void {
+    console.log('🔄 SalesReport: Cargando vendors desde backend...');
+    console.log('📋 SalesReport: Estado inicial de vendedores:', this.vendedores());
+    this.salesReportService.getVendors().subscribe({
+      next: (vendors) => {
+        console.log('✅ SalesReport: Vendors recibidos del servicio:', vendors);
+        console.log('📊 SalesReport: Cantidad de vendors:', vendors?.length || 0);
+        this.vendedores.set(vendors);
+        console.log('✅ SalesReport: Vendors asignados a vendedores:', this.vendedores());
+        console.log('📋 SalesReport: Estado final de vendedores:', JSON.stringify(this.vendedores(), null, 2));
+      },
+      error: (error) => {
+        console.error('❌ SalesReport: Error cargando vendors:', error);
+        console.error('❌ SalesReport: Detalles del error:', error.status, error.statusText, error.message);
+        // En caso de error, mantener lista vacía y mostrar mensaje opcional
+        this.messageType.set('error');
+        this.messageText.set('salesReportVendorsError');
+        this.showMessage.set(true);
+      }
+    });
+  }
+
   // Limpiar estado cuando cambian los selectores
   onSelectionChange() {
     this.showMessage.set(false);
@@ -102,17 +118,14 @@ export class SalesReport {
   
   getChartData() {
     const data = this.reportData();
-    if (!data || !data.grafico) return [];
-  
-    // Generar etiquetas más descriptivas basadas en el tipo de período
-    const periodLabels = this.generatePeriodLabels(data.period_type, data.grafico.length);
+    if (!data || !data.grafico || !Array.isArray(data.grafico)) return [];
   
     return [
       {
         name: 'Ventas',
-        series: data.grafico.map((valor: number, index: number) => ({
-          name: periodLabels[index] || `Período ${index + 1}`,
-          value: valor,
+        series: data.grafico.map((item: { periodo: string; ventas: number }) => ({
+          name: item.periodo,
+          value: item.ventas,
         })),
       },
     ];
@@ -206,17 +219,13 @@ export class SalesReport {
     const country = localStorage.getItem('userCountry') || 'CO';
     const request: SalesReportRequest = {
       vendor_id: this.vendedor(),
-      period: this.periodo(),
-      start_date: this.getStartDate(),
-      end_date: this.getEndDate()
+      period: this.periodo()
     };
 
     console.log('📋 SalesReport: Parámetros del usuario:');
     console.log('👤 SalesReport: Vendedor seleccionado:', this.vendedor());
     console.log('📅 SalesReport: Período seleccionado:', this.periodo());
     console.log('🌍 SalesReport: País seleccionado:', country);
-    console.log('📊 SalesReport: Fecha inicio calculada:', this.getStartDate());
-    console.log('📊 SalesReport: Fecha fin calculada:', this.getEndDate());
     console.log('📦 SalesReport: Request completo:', JSON.stringify(request, null, 2));
 
     // Realizar petición al backend
@@ -263,7 +272,10 @@ export class SalesReport {
             ...producto,
             ventas: this.convertValue(producto.ventas)
           })),
-          grafico: rawData.grafico // Los valores del gráfico NO se convierten - son unidades/cantidades
+          grafico: rawData.grafico.map((item: { periodo: string; ventas: number }) => ({
+            periodo: item.periodo,
+            ventas: this.convertValue(item.ventas) // Convertir ventas del gráfico también
+          }))
         };
 
         console.log('💰 SalesReport: Conversión de monedas:');
