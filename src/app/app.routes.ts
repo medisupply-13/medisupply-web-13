@@ -5,6 +5,7 @@ import { RegionalSettings } from './pages/regional-settings/regional-settings';
 import { Components } from './pages/components/components';
 import { Reports } from './pages/reports/reports';
 import { SalesReport } from './pages/reports/sales-report';
+import { GoalReports } from './pages/reports/goal-reports';
 import { RoutesGenerate } from './pages/routes/routes-generate/routes-generate';
 import { SalesPlan } from './pages/sales-plan/sales-plan';
 import { Productos } from './pages/productos/productos';
@@ -24,6 +25,7 @@ export const routes: Routes = [
   { path: 'usuarios', component: EmptyComponent },
   { path: 'reportes', component: Reports },
   { path: 'reportes/generar-venta', component: SalesReport },
+  { path: 'reportes/metas', component: GoalReports },
   { path: 'ventas', component: EmptyComponent },
   { path: 'rutas', redirectTo: 'rutas/generar', pathMatch: 'full' },
   { path: 'settings/region', component: RegionalSettings },
@@ -32,6 +34,5 @@ export const routes: Routes = [
   { path: 'rutas/generar', component: RoutesGenerate },
   { path: 'ventas/crear-plan', component: SalesPlan },
   { path: 'usuarios/registro', component: EmptyComponent },
-  { path: 'reportes', component: EmptyComponent },
   { path: 'componentes', component: Components },
 ];
