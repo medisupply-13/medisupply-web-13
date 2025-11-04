@@ -6,6 +6,10 @@
   "viewGoalReports": "Ver reportes de metas",
   "viewGoalReportsSubtitle": "Consulta los reportes de objetivos de ventas",
   "viewGoalReportsAria": "Botón para ver reportes de metas",
+  "goalReportButton": "Generar un reporte",
+  "goalReportSuccess": "Reporte de cumplimiento generado correctamente",
+  "goalReportError": "¡Ups! Hubo un error al generar el reporte. Intenta nuevamente",
+  "goalReportNoData": "¡Ups! No se encontraron datos de cumplimiento para este período",
   
   "salesReportVendorLabel": "Vendedor",
   "salesReportPeriodLabel": "Período",

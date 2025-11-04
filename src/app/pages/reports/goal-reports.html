@@ -1,9 +1,35 @@
 <app-page-header [pageTitle]="pageTitle" [backRoute]="'/reportes'"></app-page-header>
 
-<div class="goal-reports-container">
-  <div class="construction-message">
-    <h2>Página en construcción</h2>
-    <p>Los reportes de cumplimiento de metas estarán disponibles pronto.</p>
+<div class="report-container">
+  <app-custom-select
+    [labelKey]="'salesReportVendorLabel'"
+    [options]="vendedores()"
+    [model]="vendedor"
+    [required]="true"
+    (modelChange)="onSelectionChange()"
+  ></app-custom-select>
+
+  <app-custom-select
+    [labelKey]="'salesReportPeriodLabel'"
+    [options]="periodos"
+    [model]="periodo"
+    [required]="true"
+    (modelChange)="onSelectionChange()"
+    style="margin-top: 20px"
+  ></app-custom-select>
+
+  <div class="button-container">
+    <button mat-flat-button color="primary" [disabled]="isButtonDisabled" (click)="generarReporte()">
+      {{ 'goalReportButton' | translate }}
+    </button>
   </div>
+
+  <app-status-message
+    *ngIf="showMessage()"
+    [type]="messageType()"
+    [messageKey]="messageText()"
+    [float]="true"
+    [duration]="messageType() === 'error' ? 8000 : 4000"
+  ></app-status-message>
 </div>
 
