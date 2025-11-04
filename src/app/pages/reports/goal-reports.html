@@ -31,5 +31,74 @@
     [float]="true"
     [duration]="messageType() === 'error' ? 8000 : 4000"
   ></app-status-message>
+
+  <div *ngIf="reportData()" class="compliance-report">
+    <div class="report-header">
+      <h2>Reporte de Cumplimiento</h2>
+      <div class="compliance-percentage">
+        <span class="percentage-value">{{ reportData().cumplimiento_total_pct | number:'1.2-2' }}%</span>
+        <span class="percentage-label">Cumplimiento del vendedor</span>
+      </div>
+    </div>
+
+    <div class="metrics-container">
+      <!-- Métrica Producto -->
+      <div class="metric-item">
+        <div class="metric-header">
+          <span class="metric-label">Producto</span>
+          <span class="metric-value">
+            {{ formatNumber(getAggregatedMetrics().producto.achieved) }} / {{ formatNumber(getAggregatedMetrics().producto.goal) }}
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div 
+            class="progress-bar"
+            [class.red]="getProgressColor(getAggregatedMetrics().producto.achieved, getAggregatedMetrics().producto.goal) === 'red'"
+            [class.yellow]="getProgressColor(getAggregatedMetrics().producto.achieved, getAggregatedMetrics().producto.goal) === 'yellow'"
+            [class.green]="getProgressColor(getAggregatedMetrics().producto.achieved, getAggregatedMetrics().producto.goal) === 'green'"
+            [style.width.%]="getProgressPercentage(getAggregatedMetrics().producto.achieved, getAggregatedMetrics().producto.goal)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Métrica Región -->
+      <div class="metric-item">
+        <div class="metric-header">
+          <span class="metric-label">Región</span>
+          <span class="metric-value">
+            {{ formatNumber(getAggregatedMetrics().region.achieved) }} / {{ formatNumber(getAggregatedMetrics().region.goal) }}
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div 
+            class="progress-bar"
+            [class.red]="getProgressColor(getAggregatedMetrics().region.achieved, getAggregatedMetrics().region.goal) === 'red'"
+            [class.yellow]="getProgressColor(getAggregatedMetrics().region.achieved, getAggregatedMetrics().region.goal) === 'yellow'"
+            [class.green]="getProgressColor(getAggregatedMetrics().region.achieved, getAggregatedMetrics().region.goal) === 'green'"
+            [style.width.%]="getProgressPercentage(getAggregatedMetrics().region.achieved, getAggregatedMetrics().region.goal)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Métrica Total -->
+      <div class="metric-item">
+        <div class="metric-header">
+          <span class="metric-label">Total</span>
+          <span class="metric-value">
+            {{ formatNumber(getAggregatedMetrics().total.achieved) }} / {{ formatNumber(getAggregatedMetrics().total.goal) }}
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div 
+            class="progress-bar"
+            [class.red]="getProgressColor(getAggregatedMetrics().total.achieved, getAggregatedMetrics().total.goal) === 'red'"
+            [class.yellow]="getProgressColor(getAggregatedMetrics().total.achieved, getAggregatedMetrics().total.goal) === 'yellow'"
+            [class.green]="getProgressColor(getAggregatedMetrics().total.achieved, getAggregatedMetrics().total.goal) === 'green'"
+            [style.width.%]="getProgressPercentage(getAggregatedMetrics().total.achieved, getAggregatedMetrics().total.goal)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
