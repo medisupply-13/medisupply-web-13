@@ -198,12 +198,12 @@ export class GoalReports implements OnInit {
     return 'rojo';
   }
 
-  // Obtener el status para Región (usar el mismo que Producto o el status general)
+  // Obtener el status para Región basado en el porcentaje de cumplimiento
   getRegionStatus(): string {
     const data = this.reportData();
     if (!data) return 'rojo';
-    // Si hay un status específico para región, usarlo; si no, usar el de productos
-    return this.getProductStatus();
+    // Usar el mismo status que Total ya que ambos tienen la misma meta (total_goal)
+    return this.getTotalStatus();
   }
 
   // Obtener el status para Total (usar el status del data principal)
@@ -228,13 +228,13 @@ export class GoalReports implements OnInit {
       };
     }
 
-    // Sumar ventas totales de productos
+    // Sumar ventas y metas individuales de productos
     const productoAchieved = data.detalle_productos.reduce((sum: number, p: any) => sum + (p.ventas || 0), 0);
     const productoGoal = data.detalle_productos.reduce((sum: number, p: any) => sum + (p.goal || 0), 0);
-
-    // Para región, usar el mismo valor que producto (o puedes ajustar según lógica)
-    const regionAchieved = productoAchieved;
-    const regionGoal = productoGoal;
+    
+    // Para región, usar ventas totales y la meta total (que es la meta de la región)
+    const regionAchieved = data.ventasTotales || 0;
+    const regionGoal = data.total_goal || 0;
 
     return {
       producto: { achieved: productoAchieved, goal: productoGoal },
