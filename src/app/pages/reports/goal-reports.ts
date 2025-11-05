@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { StatusMessage } from '../../shared/status-message/status-message';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { SalesReportService, SalesComplianceRequest } from '../../services/sales-report.service';
+import { OfferService } from '../../services/offer.service';
 
 @Component({
   selector: 'app-goal-reports',
@@ -18,14 +19,14 @@ export class GoalReports implements OnInit {
   pageTitle = 'viewGoalReports';
   vendedor = signal<string>('');
   quarter = signal<string>('');
+  region = signal<string>('');
   showMessage = signal(false);
   messageType = signal<'success' | 'error'>('success');
   messageText = signal('');
   reportData = signal<any | null>(null);
 
   vendedores = signal<{ value: string; labelKey: string }[]>([]);
-  planes = signal<any[]>([]);
-  loadingPlans = signal(false);
+  regionOptions: { value: string; label?: string; labelKey: string }[] = [];
 
   quarters = [
     { value: 'Q1', labelKey: 'quarter_q1' },
@@ -35,10 +36,13 @@ export class GoalReports implements OnInit {
   ];
 
   get isButtonDisabled() {
-    return !this.vendedor() || !this.quarter();
+    return !this.vendedor() || !this.quarter() || !this.region();
   }
 
-  constructor(private salesReportService: SalesReportService) {
+  constructor(
+    private salesReportService: SalesReportService,
+    private offerService: OfferService
+  ) {
     console.log('🏗️ GoalReports: Componente instanciado');
   }
 
@@ -56,86 +60,73 @@ export class GoalReports implements OnInit {
         this.showMessage.set(true);
       }
     });
+
+    // Cargar regiones desde OfferService
+    this.loadRegions();
+  }
+
+  private loadRegions() {
+    this.offerService.getRegions().subscribe({
+      next: (regions) => {
+        const safe = Array.isArray(regions) ? regions : [];
+        this.regionOptions = safe.map(r => ({
+          value: String(r.value),
+          label: String(r.label || r.value),
+          labelKey: `region_${String(r.value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')}`
+        }));
+        console.log('✅ GoalReports: Regiones cargadas:', this.regionOptions);
+      },
+      error: () => {
+        // Fallback local
+        this.regionOptions = [
+          { value: 'norte', labelKey: 'region_norte' },
+          { value: 'centro', labelKey: 'region_centro' },
+          { value: 'sur', labelKey: 'region_sur' },
+          { value: 'caribe', labelKey: 'region_caribe' },
+          { value: 'pacifico', labelKey: 'region_pacifico' },
+        ];
+        console.log('⚠️ GoalReports: Usando regiones de fallback');
+      }
+    });
   }
 
   onSelectionChange() {
     this.showMessage.set(false);
     this.reportData.set(null);
-    // Cargar planes cuando hay vendedor y período seleccionados
-    if (this.vendedor() && this.quarter()) {
-      this.loadPlans();
-    }
-  }
-
-  loadPlans() {
-    if (this.loadingPlans()) return; // Evitar cargas duplicadas
-    
-    console.log('🔄 GoalReports: Cargando planes disponibles...');
-    this.loadingPlans.set(true);
-    
-    this.salesReportService.getSalesPlans().subscribe({
-      next: (plans) => {
-        console.log('✅ GoalReports: Planes cargados (formato select):', plans);
-        // Por ahora, los planes vienen en formato { value: string, labelKey: string }
-        // Necesitamos obtener los planes completos con información de quarter, region, etc.
-        // Por ahora, guardamos lo que tenemos y usamos mapeo temporal
-        this.planes.set(plans);
-        this.loadingPlans.set(false);
-      },
-      error: (error) => {
-        console.error('❌ GoalReports: Error cargando planes:', error);
-        console.warn('⚠️ GoalReports: Continuando con mapeo temporal de plan_id');
-        this.loadingPlans.set(false);
-        // Si falla, continuar con plan_id por defecto usando mapeo temporal
-      }
-    });
-  }
-
-  // Obtener el plan_id basado en el quarter seleccionado
-  getPlanIdForQuarter(q: string): number | null {
-    console.log('🔍 GoalReports: Buscando plan_id para quarter:', q);
-
-    const planIdMap: { [key: string]: number } = {
-      Q1: 1,
-      Q2: 2,
-      Q3: 3,
-      Q4: 4,
-    };
-
-    const planId = planIdMap[q];
-    if (!planId) {
-      console.error('❌ GoalReports: Quarter no reconocido:', q);
-      return null;
-    }
-    console.log('📦 GoalReports: plan_id seleccionado para', q, ':', planId);
-    return planId;
   }
 
   generarReporte() {
     console.log('🚀 GoalReports: ===== INICIANDO GENERACIÓN DE REPORTE =====');
     console.log('👤 GoalReports: Vendedor seleccionado:', this.vendedor());
     console.log('🗓️ GoalReports: Quarter seleccionado:', this.quarter());
+    console.log('🌍 GoalReports: Región seleccionada:', this.region());
 
     this.showMessage.set(false);
     this.reportData.set(null);
 
-    const planId = this.getPlanIdForQuarter(this.quarter());
-    if (planId === null) {
-      console.error('❌ GoalReports: No se pudo determinar plan_id para quarter:', this.quarter());
+    if (!this.vendedor() || !this.quarter() || !this.region()) {
+      console.error('❌ GoalReports: Faltan campos requeridos');
       this.messageType.set('error');
       this.messageText.set('goalReportError');
       this.showMessage.set(true);
       return;
     }
 
+    // Capitalizar la primera letra de la región (ej: "pacifico" -> "Pacifico")
+    const regionCapitalized = this.region().charAt(0).toUpperCase() + this.region().slice(1).toLowerCase();
+
     const request: SalesComplianceRequest = {
       vendor_id: parseInt(this.vendedor(), 10),
-      plan_id: planId,
+      region: regionCapitalized,
+      quarter: this.quarter(),
+      year: new Date().getFullYear(),
     };
 
     console.log('📦 GoalReports: Request que se enviará:', JSON.stringify(request, null, 2));
     console.log('🔍 GoalReports: vendor_id:', request.vendor_id);
-    console.log('🔍 GoalReports: plan_id:', request.plan_id, '(calculado para quarter:', this.quarter(), ')');
+    console.log('🔍 GoalReports: region:', request.region);
+    console.log('🔍 GoalReports: quarter:', request.quarter);
+    console.log('🔍 GoalReports: year:', request.year);
     console.log('🚀 GoalReports: Enviando request a sales-compliance...');
 
     this.salesReportService.getSalesCompliance(request).subscribe({

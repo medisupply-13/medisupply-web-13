@@ -32,7 +32,9 @@ export interface SalesReportResponse {
 
 export interface SalesComplianceRequest {
   vendor_id: number;
-  plan_id: number;
+  region: string;
+  quarter: string;
+  year: number;
 }
 
 export interface SalesComplianceResponse {

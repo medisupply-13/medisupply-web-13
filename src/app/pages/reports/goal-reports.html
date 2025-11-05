@@ -18,6 +18,15 @@
     style="margin-top: 20px"
   ></app-custom-select>
 
+  <app-custom-select
+    [labelKey]="'region_label'"
+    [options]="regionOptions"
+    [model]="region"
+    [required]="true"
+    (modelChange)="onSelectionChange()"
+    style="margin-top: 20px"
+  ></app-custom-select>
+
   <div class="button-container">
     <button mat-flat-button color="primary" [disabled]="isButtonDisabled" (click)="generarReporte()">
       {{ 'goalReportButton' | translate }}
