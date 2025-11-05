@@ -118,6 +118,39 @@ export class GoalReports implements OnInit {
     return 'red';
   }
 
+  // Obtener el status para Producto (basado en detalle_productos)
+  getProductStatus(): string {
+    const data = this.reportData();
+    if (!data || !data.detalle_productos || data.detalle_productos.length === 0) {
+      return 'rojo';
+    }
+    // Contar cuántos productos tienen cada status
+    const statusCounts: { [key: string]: number } = {};
+    data.detalle_productos.forEach((p: any) => {
+      const status = p.status || 'rojo';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+    // Retornar el status más común, priorizando verde > amarillo > rojo
+    if (statusCounts['verde'] && statusCounts['verde'] > 0) return 'verde';
+    if (statusCounts['amarillo'] && statusCounts['amarillo'] > 0) return 'amarillo';
+    return 'rojo';
+  }
+
+  // Obtener el status para Región (usar el mismo que Producto o el status general)
+  getRegionStatus(): string {
+    const data = this.reportData();
+    if (!data) return 'rojo';
+    // Si hay un status específico para región, usarlo; si no, usar el de productos
+    return this.getProductStatus();
+  }
+
+  // Obtener el status para Total (usar el status del data principal)
+  getTotalStatus(): string {
+    const data = this.reportData();
+    if (!data) return 'rojo';
+    return data.status || 'rojo';
+  }
+
   formatNumber(value: number): string {
     return new Intl.NumberFormat('es-CO').format(value);
   }
