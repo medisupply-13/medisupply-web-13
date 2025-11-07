@@ -1,5 +1,5 @@
-import { Component, signal, inject, OnInit, ViewChild, AfterViewInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, signal, inject, OnInit, ViewChild, AfterViewInit, computed } from '@angular/core';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -637,11 +637,60 @@ export class ProductList implements OnInit, AfterViewInit {
     });
   }
 
+  // Función para convertir valores según el país
+  // El backend devuelve valores en pesos colombianos (COP)
+  private convertValue(value: number): number {
+    const country = localStorage.getItem('userCountry') || 'CO';
+    
+    // Tasas de conversión (el backend devuelve valores en COP)
+    const rates: Record<string, number> = { 
+      'CO': 1,           // Colombia - Sin conversión (ya está en pesos)
+      'PE': 0.0014,      // Perú - COP a PEN (1 COP ≈ 0.0014 PEN)
+      'EC': 0.00026,     // Ecuador - COP a USD (1 COP ≈ 0.00026 USD)
+      'MX': 0.0047       // México - COP a MXN (1 COP ≈ 0.0047 MXN)
+    };
+    
+    const rate = rates[country] || 1;
+    return Math.round(value * rate);
+  }
+
+  // Computed signal para obtener el símbolo de moneda según el país
+  currencySymbol = computed(() => {
+    const country = localStorage.getItem('userCountry') || 'CO';
+    const symbols: Record<string, string> = { 
+      'CO': 'COP', 
+      'PE': 'PEN', 
+      'EC': 'USD', 
+      'MX': 'MXN' 
+    };
+    return symbols[country] || 'COP';
+  });
+
+  // Obtener el precio convertido según el país
+  getConvertedPrice(product: Product): number {
+    return this.convertValue(product.value);
+  }
+
   formatPrice(price: number): string {
-    return new Intl.NumberFormat('es-CO', {
+    // Usar el formato de moneda con el símbolo correcto según el país
+    const country = localStorage.getItem('userCountry') || 'CO';
+    const currency = this.currencySymbol();
+    
+    // Formatear según el país
+    const localeMap: Record<string, string> = {
+      'CO': 'es-CO',
+      'PE': 'es-PE',
+      'EC': 'es-EC',
+      'MX': 'es-MX'
+    };
+    
+    const locale = localeMap[country] || 'es-CO';
+    
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
+      currency: currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(price);
   }
 
