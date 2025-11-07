@@ -24,6 +24,7 @@ import { FileValidationService, ValidationResult } from '../../../services/file-
 import { ProductsService, Product } from '../../../services/products.service';
 import { ConfirmDialog } from './confirm-dialog.component';
 import { EditProductDialog } from './edit-product-dialog.component';
+import { AddProductDialog } from './add-product-dialog.component';
 import { ACTIVE_TRANSLATIONS } from '../../../shared/lang/lang-store';
 
 
@@ -505,6 +506,116 @@ export class ProductList implements OnInit, AfterViewInit {
       duration: 3000,
       horizontalPosition: 'end',
       verticalPosition: 'top'
+    });
+  }
+
+  addProduct(): void {
+    // Obtener categorías únicas de los productos existentes
+    const categories = this.getUniqueCategories();
+    
+    const dialogRef = this.dialog.open(AddProductDialog, {
+      width: '600px',
+      data: {
+        categories: categories.length > 0 ? categories : this.availableCategories
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.createProduct(result);
+      }
+    });
+  }
+
+  private getUniqueCategories(): string[] {
+    const categoriesSet = new Set<string>();
+    this.products().forEach(product => {
+      if (product.category_name) {
+        categoriesSet.add(product.category_name);
+      }
+    });
+    return Array.from(categoriesSet).sort();
+  }
+
+  private createProduct(productData: Partial<Product> & { section?: string; aisle?: string; shelf?: string; level?: string }): void {
+    this.isLoading.set(true);
+    
+    // Preparar los datos para el endpoint /products/insert
+    // El backend espera: sku, name, value, category_name, quantity, warehouse_id, y opcionales: section, aisle, shelf, level, image_url
+    const productToInsert: any = {
+      sku: productData.sku!,
+      name: productData.name!,
+      value: productData.value!,
+      category_name: productData.category_name!,
+      quantity: productData.total_quantity || 0,
+      warehouse_id: this.selectedWarehouseId || 1 // Usar warehouse_id seleccionado o default 1
+    };
+
+    // Incluir campos opcionales si están presentes
+    if (productData.image_url) {
+      productToInsert.image_url = productData.image_url;
+    }
+    if (productData.section) {
+      productToInsert.section = productData.section;
+    }
+    if (productData.aisle) {
+      productToInsert.aisle = productData.aisle;
+    }
+    if (productData.shelf) {
+      productToInsert.shelf = productData.shelf;
+    }
+    if (productData.level) {
+      productToInsert.level = productData.level;
+    }
+
+    console.log('🔄 ProductList: Insertando producto:', productToInsert);
+    
+    // Usar el servicio para insertar el producto
+    this.productsService.insertProduct(productToInsert).subscribe({
+      next: (result) => {
+        console.log('✅ ProductList: Producto creado exitosamente:', result);
+        this.snackBar.open(
+          this.translate('productCreatedSuccess') || 'Producto creado exitosamente',
+          this.translate('closeButton') || 'Cerrar',
+          {
+            duration: 3000,
+            horizontalPosition: 'end',
+            verticalPosition: 'top'
+          }
+        );
+        // Recargar la lista de productos
+        this.loadProducts();
+      },
+      error: (error) => {
+        console.error('❌ ProductList: Error al crear producto:', error);
+        this.isLoading.set(false);
+        let errorMessage = 'Error al crear el producto';
+        
+        // Extraer mensaje de error del response
+        if (error?.error) {
+          if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          } else if (error.error.message) {
+            errorMessage = error.error.message;
+          } else if (error.error.errors && Array.isArray(error.error.errors)) {
+            errorMessage = error.error.errors.join(', ');
+          } else if (error.error.error) {
+            errorMessage = error.error.error;
+          }
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        this.snackBar.open(
+          errorMessage,
+          this.translate('closeButton') || 'Cerrar',
+          {
+            duration: 5000,
+            horizontalPosition: 'end',
+            verticalPosition: 'top'
+          }
+        );
+      }
     });
   }
 
