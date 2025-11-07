@@ -11,6 +11,7 @@ import { SalesPlan } from './pages/sales-plan/sales-plan';
 import { Productos } from './pages/productos/productos';
 import { UbicacionComponent } from './pages/productos/ubicacion/ubicacion';
 import { ProductList } from './pages/products/product-list/product-list';
+import { UserRegistration } from './pages/users/user-registration/user-registration';
 
 @Component({
   standalone: true,
@@ -33,6 +34,6 @@ export const routes: Routes = [
   { path: 'productos/ubicacion', component: UbicacionComponent },
   { path: 'rutas/generar', component: RoutesGenerate },
   { path: 'ventas/crear-plan', component: SalesPlan },
-  { path: 'usuarios/registro', component: EmptyComponent },
+  { path: 'usuarios/registro', component: UserRegistration },
   { path: 'componentes', component: Components },
 ];

@@ -287,5 +287,13 @@
   "sortByAvailability": "Ordenar por disponibilidad",
   "noSorting": "Sin ordenamiento",
   "skuLabel": "SKU",
-  "totalLabel": "Total"
+  "totalLabel": "Total",
+
+  "userRegistrationTitle": "Registro de usuarios",
+  "userRegistrationSubtitle": "Importa usuarios desde un archivo CSV",
+  "uploadUsersButton": "Subir usuarios",
+  "uploadUsersAria": "Subir usuarios al sistema",
+  "uploadValidationError": "¡Ups! El archivo tiene errores de validación, revisa y sube nuevamente",
+  "uploadDuplicatedUsers": "¡Ups! Existen usuarios duplicados, revisa el archivo",
+  "templateDownloaded": "Plantilla descargada exitosamente"
 }

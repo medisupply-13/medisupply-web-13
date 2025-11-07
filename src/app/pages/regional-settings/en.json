@@ -286,5 +286,13 @@
   "sortByAvailability": "Sort by availability",
   "noSorting": "No sorting",
   "skuLabel": "SKU",
-  "totalLabel": "Total"
+  "totalLabel": "Total",
+
+  "userRegistrationTitle": "User Registration",
+  "userRegistrationSubtitle": "Import users from a CSV file",
+  "uploadUsersButton": "Upload users",
+  "uploadUsersAria": "Upload users to the system",
+  "uploadValidationError": "Oops! The file has validation errors, please review and upload again",
+  "uploadDuplicatedUsers": "Oops! There are duplicate users, please review the file",
+  "templateDownloaded": "Template downloaded successfully"
 }
