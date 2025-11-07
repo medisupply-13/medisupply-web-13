@@ -199,9 +199,7 @@ export class UserValidationService {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-File-Name': fileName,
-        'X-File-Type': 'csv'
+        'Content-Type': 'application/json'
       },
       body: jsonPayload
     });

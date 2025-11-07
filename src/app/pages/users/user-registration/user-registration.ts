@@ -279,12 +279,10 @@ export class UserRegistration implements OnInit {
       // Limpiar archivos cargados
       this.uploadedFiles.set([]);
       
-      // Ocultar mensaje de éxito después de 2 segundos y redirigir al dashboard
+      // Ocultar mensaje de éxito después de 3 segundos (sin redirigir)
       setTimeout(() => {
         this.showSuccessMessage.set(false);
-        // Redirigir al dashboard según HU107
-        this.router.navigate(['/dashboard']);
-      }, 2000);
+      }, 3000);
       
     } catch (error) {
       console.error('Error al procesar archivos:', error);
