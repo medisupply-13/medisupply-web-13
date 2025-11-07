@@ -26,7 +26,7 @@ export class UserValidationService {
   private readonly maxFileSize = 5 * 1024 * 1024; // 5MB según HU107
   private readonly allowedTypes = ['.csv', '.xlsx'];
   private readonly requiredFields = ['nombre', 'apellido', 'correo', 'identificacion', 'telefono', 'rol', 'contraseña'];
-  private readonly validRoles = ['SELLER', 'CLIENT'];
+  private readonly validRoles = ['SELLER', 'CLIENT', 'ADMIN'];
 
   /**
    * Valida un archivo CSV de usuarios
@@ -274,13 +274,24 @@ export class UserValidationService {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    const normalizedHeaders = headers.map(h => 
-      h.toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9_]/g, '_')
+    // Normalizar headers preservando caracteres especiales del español (ñ, acentos)
+    const normalizedHeaders = headers.map(h => {
+      const trimmed = h.toLowerCase().trim();
+      // Normalizar pero mantener caracteres especiales del español
+      return trimmed
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos diacríticos
+        .replace(/[^a-z0-9_ñ]/g, '_') // Mantener ñ
         .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '')
-    );
+        .replace(/^_|_$/g, '');
+    });
+
+    // También crear un mapa de headers originales (sin normalizar) para búsqueda directa
+    const originalHeadersMap: { [key: string]: number } = {};
+    headers.forEach((header, index) => {
+      const key = header.toLowerCase().trim();
+      originalHeadersMap[key] = index;
+    });
 
     const fieldVariations: { [key: string]: string[] } = {
       'nombre': ['nombre', 'name', 'first_name', 'firstname'],
@@ -289,7 +300,7 @@ export class UserValidationService {
       'identificacion': ['identificacion', 'id', 'documento', 'document', 'cedula', 'dni'],
       'telefono': ['telefono', 'phone', 'telephone', 'celular', 'mobile'],
       'rol': ['rol', 'role', 'tipo', 'type', 'perfil'],
-      'contraseña': ['contraseña', 'contrasea', 'password', 'pass', 'passwd']
+      'contraseña': ['contraseña', 'contrasea', 'contrasena', 'password', 'pass', 'passwd']
     };
 
     const missingFields: string[] = [];
@@ -297,14 +308,42 @@ export class UserValidationService {
     for (const field of this.requiredFields) {
       let found = false;
       
-      if (normalizedHeaders.includes(field)) {
+      // Buscar en headers normalizados
+      const fieldNormalized = field
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_ñ]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+      
+      if (normalizedHeaders.includes(fieldNormalized)) {
         found = true;
       } else {
-        const variations = fieldVariations[field] || [];
-        for (const variation of variations) {
-          if (normalizedHeaders.includes(variation)) {
-            found = true;
-            break;
+        // Buscar en headers originales (sin normalizar)
+        if (originalHeadersMap[field] !== undefined) {
+          found = true;
+        } else {
+          // Buscar variaciones
+          const variations = fieldVariations[field] || [];
+          for (const variation of variations) {
+            // Buscar variación normalizada
+            const variationNormalized = variation
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^a-z0-9_ñ]/g, '_')
+              .replace(/_+/g, '_')
+              .replace(/^_|_$/g, '');
+            
+            if (normalizedHeaders.includes(variationNormalized)) {
+              found = true;
+              break;
+            }
+            
+            // Buscar variación en headers originales
+            if (originalHeadersMap[variation] !== undefined) {
+              found = true;
+              break;
+            }
           }
         }
       }
@@ -329,18 +368,63 @@ export class UserValidationService {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    const normalizedHeaders = headers.map(h => 
-      h.toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9_]/g, '_')
+    // Normalizar headers preservando caracteres especiales del español (ñ, acentos)
+    const normalizedHeaders = headers.map(h => {
+      const trimmed = h.toLowerCase().trim();
+      return trimmed
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos diacríticos
+        .replace(/[^a-z0-9_ñ]/g, '_') // Mantener ñ
         .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '')
-    );
+        .replace(/^_|_$/g, '');
+    });
 
+    // Crear mapa de headers normalizados
     const headerMap: { [key: string]: number } = {};
     normalizedHeaders.forEach((header, index) => {
       headerMap[header] = index;
     });
+
+    // También crear mapa de headers originales para búsqueda directa
+    const originalHeaderMap: { [key: string]: number } = {};
+    headers.forEach((header, index) => {
+      const key = header.toLowerCase().trim();
+      originalHeaderMap[key] = index;
+    });
+
+    // Función auxiliar para obtener índice de header
+    const getHeaderIndex = (fieldName: string, variations: string[]): number | undefined => {
+      const fieldNormalized = fieldName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_ñ]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+      
+      if (headerMap[fieldNormalized] !== undefined) {
+        return headerMap[fieldNormalized];
+      }
+      if (originalHeaderMap[fieldName] !== undefined) {
+        return originalHeaderMap[fieldName];
+      }
+      
+      for (const variation of variations) {
+        const variationNormalized = variation
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9_ñ]/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_|_$/g, '');
+        
+        if (headerMap[variationNormalized] !== undefined) {
+          return headerMap[variationNormalized];
+        }
+        if (originalHeaderMap[variation] !== undefined) {
+          return originalHeaderMap[variation];
+        }
+      }
+      return undefined;
+    };
 
     // Validar campos requeridos
     const fieldMappings: { [key: string]: string[] } = {
@@ -350,67 +434,47 @@ export class UserValidationService {
       'identificacion': ['identificacion', 'id', 'documento'],
       'telefono': ['telefono', 'phone'],
       'rol': ['rol', 'role'],
-      'contraseña': ['contraseña', 'password']
+      'contraseña': ['contraseña', 'contrasea', 'contrasena', 'password']
     };
 
     for (const [field, variations] of Object.entries(fieldMappings)) {
-      let found = false;
-      for (const variation of variations) {
-        if (headerMap[variation] !== undefined) {
-          const value = rowData[headerMap[variation]]?.trim();
-          if (!value || value === '') {
-            errors.push(`Fila ${rowNum}: ${field} es obligatorio`);
-          }
-          found = true;
-          break;
+      const headerIndex = getHeaderIndex(field, variations);
+      
+      if (headerIndex !== undefined) {
+        const value = rowData[headerIndex]?.trim();
+        if (!value || value === '') {
+          errors.push(`Fila ${rowNum}: ${field} es obligatorio`);
         }
-      }
-      if (!found) {
+      } else {
         errors.push(`Fila ${rowNum}: Campo ${field} no encontrado`);
       }
     }
 
     // Validar formato de correo
-    if (headerMap['correo'] !== undefined) {
-      const email = rowData[headerMap['correo']]?.trim();
+    const correoIndex = getHeaderIndex('correo', ['correo', 'email']);
+    if (correoIndex !== undefined) {
+      const email = rowData[correoIndex]?.trim();
       if (email && !this.isValidEmail(email)) {
         errors.push(`Fila ${rowNum}: El correo "${email}" no es válido`);
       }
     }
 
     // Validar rol
-    if (headerMap['rol'] !== undefined) {
-      const rol = rowData[headerMap['rol']]?.trim().toUpperCase();
+    const rolIndex = getHeaderIndex('rol', ['rol', 'role']);
+    if (rolIndex !== undefined) {
+      const rol = rowData[rolIndex]?.trim().toUpperCase();
       if (rol && !this.validRoles.includes(rol)) {
-        errors.push(`Fila ${rowNum}: El rol "${rol}" no es válido. Debe ser SELLER o CLIENT`);
+        errors.push(`Fila ${rowNum}: El rol "${rol}" no es válido. Debe ser SELLER, CLIENT o ADMIN`);
       }
     }
 
-    // Validar contraseña encriptada (debe ser una cadena encriptada, no texto plano)
-    // Según HU107: Si se detecta texto plano, se rechaza todo el archivo
-    if (headerMap['contraseña'] !== undefined || headerMap['password'] !== undefined) {
-      const passwordField = headerMap['contraseña'] !== undefined ? 'contraseña' : 'password';
-      const password = rowData[headerMap[passwordField]]?.trim();
-      if (password) {
-        // Verificar si parece ser texto plano
-        // Las contraseñas encriptadas típicamente:
-        // - bcrypt: empiezan con $2a$, $2b$, $2y$ y tienen 60 caracteres
-        // - SHA256/512: tienen 64 o 128 caracteres hexadecimales
-        // - Otros hashes: tienen al menos 32 caracteres hexadecimales
-        const isEncrypted = 
-          password.length >= 32 && (
-            password.startsWith('$2a$') || 
-            password.startsWith('$2b$') || 
-            password.startsWith('$2y$') || 
-            password.startsWith('$2$') ||
-            /^[a-f0-9]{32,}$/i.test(password) ||
-            password.length >= 60
-          );
-        
-        if (!isEncrypted) {
-          // Rechazar todo el archivo según HU107
-          errors.push(`Fila ${rowNum}: La contraseña debe estar encriptada, no en texto plano. El archivo será rechazado.`);
-        }
+    // Validar que la contraseña existe (sin validar si está encriptada o en texto plano)
+    const passwordIndex = getHeaderIndex('contraseña', ['contraseña', 'contrasea', 'contrasena', 'password']);
+    if (passwordIndex !== undefined) {
+      const password = rowData[passwordIndex]?.trim();
+      // Solo validar que existe, aceptar cualquier formato (texto plano o encriptado)
+      if (!password || password === '') {
+        errors.push(`Fila ${rowNum}: contraseña es obligatorio`);
       }
     }
 
@@ -422,17 +486,28 @@ export class UserValidationService {
   }
 
   private mapRowToUser(rowData: string[], headers: string[]): UserTemplate {
-    const normalizedHeaders = headers.map(h => 
-      h.toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9_]/g, '_')
+    // Normalizar headers preservando caracteres especiales del español (ñ, acentos)
+    const normalizedHeaders = headers.map(h => {
+      const trimmed = h.toLowerCase().trim();
+      return trimmed
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos diacríticos
+        .replace(/[^a-z0-9_ñ]/g, '_') // Mantener ñ
         .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '')
-    );
+        .replace(/^_|_$/g, '');
+    });
 
+    // Crear mapa de headers normalizados
     const headerMap: { [key: string]: number } = {};
     normalizedHeaders.forEach((header, index) => {
       headerMap[header] = index;
+    });
+
+    // También crear mapa de headers originales para búsqueda directa
+    const originalHeaderMap: { [key: string]: number } = {};
+    headers.forEach((header, index) => {
+      const key = header.toLowerCase().trim();
+      originalHeaderMap[key] = index;
     });
 
     const fieldMappings: { [key: string]: { variations: string[]; defaultValue?: string } } = {
@@ -442,21 +517,60 @@ export class UserValidationService {
       'identificacion': { variations: ['identificacion', 'id', 'documento'] },
       'telefono': { variations: ['telefono', 'phone'] },
       'rol': { variations: ['rol', 'role'] },
-      'contraseña': { variations: ['contraseña', 'password'] }
+      'contraseña': { variations: ['contraseña', 'contrasea', 'contrasena', 'password'] }
     };
 
     const user: any = {};
 
     for (const [field, config] of Object.entries(fieldMappings)) {
       let found = false;
-      for (const variation of config.variations) {
-        if (headerMap[variation] !== undefined) {
-          user[field] = rowData[headerMap[variation]]?.trim() || '';
+      let headerIndex: number | undefined;
+      
+      // Normalizar el nombre del campo para buscar en headers normalizados
+      const fieldNormalized = field
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_ñ]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+      
+      // Buscar primero en headers normalizados
+      if (headerMap[fieldNormalized] !== undefined) {
+        headerIndex = headerMap[fieldNormalized];
+        found = true;
+      } else {
+        // Buscar en headers originales
+        if (originalHeaderMap[field] !== undefined) {
+          headerIndex = originalHeaderMap[field];
           found = true;
-          break;
+        } else {
+          // Buscar variaciones
+          for (const variation of config.variations) {
+            const variationNormalized = variation
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^a-z0-9_ñ]/g, '_')
+              .replace(/_+/g, '_')
+              .replace(/^_|_$/g, '');
+            
+            if (headerMap[variationNormalized] !== undefined) {
+              headerIndex = headerMap[variationNormalized];
+              found = true;
+              break;
+            }
+            
+            if (originalHeaderMap[variation] !== undefined) {
+              headerIndex = originalHeaderMap[variation];
+              found = true;
+              break;
+            }
+          }
         }
       }
-      if (!found && config.defaultValue) {
+      
+      if (found && headerIndex !== undefined) {
+        user[field] = rowData[headerIndex]?.trim() || '';
+      } else if (config.defaultValue) {
         user[field] = config.defaultValue;
       }
     }
