@@ -500,15 +500,6 @@ export class ProductList implements OnInit, AfterViewInit {
     return this.uploadedFiles().filter(file => file.isValid).length;
   }
 
-  editProduct(product: Product): void {
-    // Por ahora, mostrar mensaje de que la edición no está implementada
-    this.snackBar.open(this.translate('editNotImplemented'), this.translate('closeButton'), {
-      duration: 3000,
-      horizontalPosition: 'end',
-      verticalPosition: 'top'
-    });
-  }
-
   addProduct(): void {
     // Obtener categorías únicas de los productos existentes
     const categories = this.getUniqueCategories();
@@ -541,34 +532,34 @@ export class ProductList implements OnInit, AfterViewInit {
     this.isLoading.set(true);
     
     // Preparar los datos para el endpoint /products/insert
-    // El backend espera: sku, name, value, category_name, quantity, warehouse_id, y opcionales: section, aisle, shelf, level, image_url
     const productToInsert: any = {
       sku: productData.sku!,
       name: productData.name!,
       value: productData.value!,
       category_name: productData.category_name!,
       quantity: productData.total_quantity || 0,
-      warehouse_id: this.selectedWarehouseId || 1 // Usar warehouse_id seleccionado o default 1
+      warehouse_id: this.selectedWarehouseId || 1
     };
 
-    // Incluir campos opcionales si están presentes
+    // Incluir campos opcionales
     if (productData.image_url) {
       productToInsert.image_url = productData.image_url;
     }
-    if (productData.section) {
-      productToInsert.section = productData.section;
-    }
-    if (productData.aisle) {
-      productToInsert.aisle = productData.aisle;
-    }
-    if (productData.shelf) {
-      productToInsert.shelf = productData.shelf;
-    }
-    if (productData.level) {
-      productToInsert.level = productData.level;
-    }
-
-    console.log('🔄 ProductList: Insertando producto:', productToInsert);
+    
+    // IMPORTANTE: Incluir campos de ubicación siempre (incluso si están vacíos)
+    // El backend espera estos campos cuando se envían desde CSV
+    productToInsert.section = productData.section || '';
+    productToInsert.aisle = productData.aisle || '';
+    productToInsert.shelf = productData.shelf || '';
+    productToInsert.level = productData.level || '';
+    
+    console.log('📦 ProductList: Datos completos a enviar al backend:', JSON.stringify(productToInsert, null, 2));
+    console.log('📦 ProductList: Campos de ubicación:', {
+      section: productToInsert.section,
+      aisle: productToInsert.aisle,
+      shelf: productToInsert.shelf,
+      level: productToInsert.level
+    });
     
     // Usar el servicio para insertar el producto
     this.productsService.insertProduct(productToInsert).subscribe({
@@ -616,6 +607,15 @@ export class ProductList implements OnInit, AfterViewInit {
           }
         );
       }
+    });
+  }
+
+  editProduct(product: Product): void {
+    // Por ahora, mostrar mensaje de que la edición no está implementada
+    this.snackBar.open(this.translate('editNotImplemented'), this.translate('closeButton'), {
+      duration: 3000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top'
     });
   }
 
