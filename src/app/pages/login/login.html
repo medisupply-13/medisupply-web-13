@@ -2,14 +2,9 @@
   <!-- Sección izquierda: Branding -->
   <div class="login-branding">
     <div class="branding-content">
-      <div class="brand-header">
-        <span class="brand-plus">+</span>
-        <span class="brand-small">MediSupply</span>
-      </div>
       <div class="logo-container">
         <img src="assets/logo.svg" alt="MediSupply Logo" class="logo" />
       </div>
-      <h1 class="brand-name">MediSupply</h1>
       <div class="tagline">
         <p>Gestiona,</p>
         <p>vende y entrega</p>
@@ -50,7 +45,7 @@
               id="contraseña"
               [type]="hidePassword ? 'password' : 'text'"
               formControlName="contraseña"
-              placeholder="Ingrese su contraseña"
+              placeholder="********"
               class="form-input"
               [class.ng-invalid]="loginForm.get('contraseña')?.invalid && loginForm.get('contraseña')?.touched"
               (blur)="loginForm.get('contraseña')?.markAsTouched()"

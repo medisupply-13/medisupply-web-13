@@ -22,79 +22,46 @@
 .branding-content {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  text-align: left;
+  text-align: center;
   color: white;
   width: 100%;
-  max-width: 600px;
-  padding-left: 60px;
-}
-
-.brand-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 48px;
-  font-size: 1.25rem;
-  font-weight: 400;
-}
-
-.brand-plus {
-  font-size: 1.5rem;
-  font-weight: 300;
-  color: white;
-}
-
-.brand-small {
-  font-size: 1.25rem;
-  font-weight: 400;
-  color: white;
-  font-family: 'League Spartan', sans-serif;
+  max-width: 500px;
 }
 
 .logo-container {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
 }
 
 .logo {
-  width: 120px;
-  height: 120px;
-  filter: brightness(0) invert(1); /* Hace el logo blanco */
-}
-
-.brand-name {
-  font-size: 3rem;
-  font-weight: 700;
-  margin: 0 0 48px 0;
-  color: white;
-  font-family: 'League Spartan', sans-serif;
-  text-align: left;
+  width: 300px;
+  height: auto;
 }
 
 .tagline {
-  text-align: left;
+  text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .tagline p {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 400;
   margin: 0;
   color: white;
-  line-height: 1.4;
+  line-height: 1.5;
   font-family: 'League Spartan', sans-serif;
 }
 
 /* Sección derecha: Formulario */
 .login-form-section {
   width: 50%;
-  background: #DDE6F5;
+  background: #E0E6F6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,8 +79,8 @@
 .form-title {
   font-size: 2rem;
   font-weight: 600;
-  color: #1a237e;
-  margin: 0 0 48px 0;
+  color: #2E5BFF;
+  margin: 0 0 40px 0;
   text-align: center;
   font-family: 'League Spartan', sans-serif;
 }
@@ -121,7 +88,7 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 .form-field-wrapper {
@@ -162,6 +129,7 @@
 
 .form-input::placeholder {
   color: #999;
+  opacity: 0.7;
 }
 
 .password-input-wrapper {
@@ -238,15 +206,14 @@
   }
 
   .branding-content {
-    padding-left: 20px;
+    padding: 0 20px;
     align-items: center;
     text-align: center;
   }
 
-  .brand-name {
-    font-size: 2rem;
-    margin-bottom: 24px;
-    text-align: center;
+  .logo {
+    width: 250px;
+    height: auto;
   }
 
   .tagline {
@@ -254,7 +221,7 @@
   }
 
   .tagline p {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
   }
 
   .login-form-section {
@@ -271,12 +238,8 @@
 
 @media (max-width: 480px) {
   .logo {
-    width: 80px;
-    height: 80px;
-  }
-
-  .brand-name {
-    font-size: 1.75rem;
+    width: 250px;
+    height: auto;
   }
 
   .tagline p {
