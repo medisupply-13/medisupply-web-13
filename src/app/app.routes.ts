@@ -12,6 +12,7 @@ import { Productos } from './pages/productos/productos';
 import { UbicacionComponent } from './pages/productos/ubicacion/ubicacion';
 import { ProductList } from './pages/products/product-list/product-list';
 import { UserRegistration } from './pages/users/user-registration/user-registration';
+import { SellerRegistration } from './pages/users/seller-registration/seller-registration';
 import { LoginComponent } from './pages/login/login';
 import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
@@ -66,6 +67,12 @@ export const routes: Routes = [
   { 
     path: 'usuarios/registro', 
     component: UserRegistration,
+    canActivate: [AuthGuard, RoleGuard],
+    data: { allowedRoles: ['ADMIN'] }
+  },
+  { 
+    path: 'usuarios/vendedores', 
+    component: SellerRegistration,
     canActivate: [AuthGuard, RoleGuard],
     data: { allowedRoles: ['ADMIN'] }
   },

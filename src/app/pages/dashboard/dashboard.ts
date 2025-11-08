@@ -60,6 +60,14 @@ export class Dashboard implements OnInit {
       roles: ['ADMIN'],
     },
     {
+      titleKey: 'cardSellersTitle',
+      subtitleKey: 'cardSellersSubtitle',
+      icon: 'user',
+      ariaLabelKey: 'cardSellersAria',
+      path: '/usuarios/vendedores',
+      roles: ['ADMIN'],
+    },
+    {
       titleKey: 'cardReportsTitle',
       subtitleKey: 'cardReportsSubtitle',
       icon: 'reports',
