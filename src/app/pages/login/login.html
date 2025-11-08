@@ -1,0 +1,84 @@
+<div class="login-container">
+  <!-- Sección izquierda: Branding -->
+  <div class="login-branding">
+    <div class="branding-content">
+      <div class="brand-header">
+        <span class="brand-plus">+</span>
+        <span class="brand-small">MediSupply</span>
+      </div>
+      <div class="logo-container">
+        <img src="assets/logo.svg" alt="MediSupply Logo" class="logo" />
+      </div>
+      <h1 class="brand-name">MediSupply</h1>
+      <div class="tagline">
+        <p>Gestiona,</p>
+        <p>vende y entrega</p>
+        <p>sin complicaciones</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sección derecha: Formulario de Login -->
+  <div class="login-form-section">
+    <div class="form-container">
+      <h2 class="form-title">Iniciar Sesión</h2>
+      
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+        <div class="form-field-wrapper">
+          <label for="correo" class="form-label">Correo</label>
+          <input
+            id="correo"
+            type="email"
+            formControlName="correo"
+            placeholder="example@example.com"
+            class="form-input"
+            [class.ng-invalid]="loginForm.get('correo')?.invalid && loginForm.get('correo')?.touched"
+            (blur)="loginForm.get('correo')?.markAsTouched()"
+          />
+          <div class="error-message" *ngIf="loginForm.get('correo')?.hasError('required') && loginForm.get('correo')?.touched">
+            Campo obligatorio
+          </div>
+          <div class="error-message" *ngIf="loginForm.get('correo')?.hasError('email') && loginForm.get('correo')?.touched">
+            Ingrese un correo válido
+          </div>
+        </div>
+
+        <div class="form-field-wrapper">
+          <label for="contraseña" class="form-label">Contraseña</label>
+          <div class="password-input-wrapper">
+            <input
+              id="contraseña"
+              [type]="hidePassword ? 'password' : 'text'"
+              formControlName="contraseña"
+              placeholder="Ingrese su contraseña"
+              class="form-input"
+              [class.ng-invalid]="loginForm.get('contraseña')?.invalid && loginForm.get('contraseña')?.touched"
+              (blur)="loginForm.get('contraseña')?.markAsTouched()"
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="hidePassword ? 'Mostrar contraseña' : 'Ocultar contraseña'"
+            >
+              <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </div>
+          <div class="error-message" *ngIf="loginForm.get('contraseña')?.hasError('required') && loginForm.get('contraseña')?.touched">
+            Campo obligatorio
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="login-button"
+          [disabled]="loginForm.invalid || isLoading"
+        >
+          <span *ngIf="isLoading">Iniciando sesión...</span>
+          <span *ngIf="!isLoading">Iniciar sesión</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
