@@ -28,5 +28,12 @@ export class Productos {
       ariaLabelKey: 'cardProductLocationAria',
       path: '/productos/ubicacion',
     },
+    {
+      titleKey: 'cardProvidersTitle',
+      subtitleKey: 'cardProvidersSubtitle',
+      icon: 'box',
+      ariaLabelKey: 'cardProvidersAria',
+      path: '/productos/proveedores',
+    },
   ];
 }

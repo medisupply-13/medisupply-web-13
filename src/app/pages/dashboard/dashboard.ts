@@ -52,19 +52,11 @@ export class Dashboard implements OnInit {
       roles: ['ADMIN', 'SUPERVISOR'],
     },
     {
-      titleKey: 'cardUsersTitle',
-      subtitleKey: 'cardUsersSubtitle',
+      titleKey: 'cardRegistrationsTitle',
+      subtitleKey: 'cardRegistrationsSubtitle',
       icon: 'users',
-      ariaLabelKey: 'cardUsersAria',
-      path: '/usuarios/registro',
-      roles: ['ADMIN'],
-    },
-    {
-      titleKey: 'cardSellersTitle',
-      subtitleKey: 'cardSellersSubtitle',
-      icon: 'user',
-      ariaLabelKey: 'cardSellersAria',
-      path: '/usuarios/vendedores',
+      ariaLabelKey: 'cardRegistrationsAria',
+      path: '/usuarios',
       roles: ['ADMIN'],
     },
     {

@@ -11,6 +11,8 @@ import { SalesPlan } from './pages/sales-plan/sales-plan';
 import { Productos } from './pages/productos/productos';
 import { UbicacionComponent } from './pages/productos/ubicacion/ubicacion';
 import { ProductList } from './pages/products/product-list/product-list';
+import { ProviderRegistration } from './pages/products/provider-registration/provider-registration';
+import { Users } from './pages/users/users';
 import { UserRegistration } from './pages/users/user-registration/user-registration';
 import { SellerRegistration } from './pages/users/seller-registration/seller-registration';
 import { LoginComponent } from './pages/login/login';
@@ -56,11 +58,17 @@ export const routes: Routes = [
     canActivate: [AuthGuard, RoleGuard],
     data: { allowedRoles: ['ADMIN', 'PROVIDER'] }
   },
+  { 
+    path: 'productos/proveedores', 
+    component: ProviderRegistration,
+    canActivate: [AuthGuard, RoleGuard],
+    data: { allowedRoles: ['ADMIN', 'PROVIDER'] }
+  },
   
   // Gestión de Usuarios - Solo ADMIN
   { 
     path: 'usuarios', 
-    component: EmptyComponent,
+    component: Users,
     canActivate: [AuthGuard, RoleGuard],
     data: { allowedRoles: ['ADMIN'] }
   },
