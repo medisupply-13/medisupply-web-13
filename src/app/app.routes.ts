@@ -62,7 +62,7 @@ export const routes: Routes = [
     path: 'productos/proveedores', 
     component: ProviderRegistration,
     canActivate: [AuthGuard, RoleGuard],
-    data: { allowedRoles: ['ADMIN', 'PROVIDER'] }
+    data: { allowedRoles: ['ADMIN'] }
   },
   
   // Gestión de Usuarios - Solo ADMIN

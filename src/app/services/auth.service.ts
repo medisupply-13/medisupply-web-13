@@ -52,7 +52,7 @@ export class AuthService {
   // Signal reactivo para el usuario actual
   currentUser = signal<User | null>(this.getUserFromStorage());
   isAuthenticated = computed(() => this.currentUser() !== null);
-  userRole = computed(() => this.currentUser()?.role || null);
+  readonly userRole = computed(() => this.currentUser()?.role || null);
 
   constructor(
     private http: HttpClient,
