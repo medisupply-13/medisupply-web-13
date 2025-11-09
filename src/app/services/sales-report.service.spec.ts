@@ -29,19 +29,28 @@ describe('SalesReportService', () => {
     it('should return sales report successfully', (done) => {
       const request: SalesReportRequest = {
         vendor_id: 'VEN001',
-        period: 'monthly',
-        start_date: '2025-01-01',
-        end_date: '2025-01-31'
+        period: 'monthly'
       };
 
       const mockResponse: SalesReportResponse = {
         data: {
-          ventasTotales: 50000,
-          productos: [
-            { nombre: 'Producto 1', ventas: 25000 },
-            { nombre: 'Producto 2', ventas: 25000 }
+          generated_at: '2025-01-31T00:00:00Z',
+          grafico: [
+            { periodo: '2025-01', ventas: 10000 },
+            { periodo: '2025-02', ventas: 20000 },
+            { periodo: '2025-03', ventas: 30000 },
+            { periodo: '2025-04', ventas: 40000 },
+            { periodo: '2025-05', ventas: 50000 }
           ],
-          grafico: [10, 20, 30, 40, 50]
+          pedidos: 100,
+          period_type: 'monthly',
+          periodo: '2025-01',
+          productos: [
+            { nombre: 'Producto 1', ventas: 25000, cantidad: 50 },
+            { nombre: 'Producto 2', ventas: 25000, cantidad: 50 }
+          ],
+          vendor_id: 'VEN001',
+          ventasTotales: 50000
         },
         success: true
       };
@@ -65,9 +74,7 @@ describe('SalesReportService', () => {
     it('should handle error', (done) => {
       const request: SalesReportRequest = {
         vendor_id: 'INVALID',
-        period: 'monthly',
-        start_date: '2025-01-01',
-        end_date: '2025-01-31'
+        period: 'monthly'
       };
 
       service.getSalesReport(request).subscribe({
@@ -85,16 +92,19 @@ describe('SalesReportService', () => {
     it('should handle response with empty data', (done) => {
       const request: SalesReportRequest = {
         vendor_id: 'VEN002',
-        period: 'yearly',
-        start_date: '2024-01-01',
-        end_date: '2024-12-31'
+        period: 'yearly'
       };
 
       const mockResponse: SalesReportResponse = {
         data: {
-          ventasTotales: 0,
+          generated_at: '2024-12-31T00:00:00Z',
+          grafico: [],
+          pedidos: 0,
+          period_type: 'yearly',
+          periodo: '2024',
           productos: [],
-          grafico: []
+          vendor_id: 'VEN002',
+          ventasTotales: 0
         },
         success: true
       };
@@ -115,9 +125,7 @@ describe('SalesReportService', () => {
     it('should handle network error', (done) => {
       const request: SalesReportRequest = {
         vendor_id: 'VEN003',
-        period: 'weekly',
-        start_date: '2025-01-01',
-        end_date: '2025-01-07'
+        period: 'weekly'
       };
 
       service.getSalesReport(request).subscribe({
