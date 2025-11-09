@@ -135,12 +135,11 @@ export const routes: Routes = [
     data: { allowedRoles: ['ADMIN', 'PLANNER'] }
   },
   
-  // Configuración - Solo ADMIN
+  // Configuración Regional - Disponible para todos los usuarios autenticados
   { 
     path: 'settings/region', 
     component: RegionalSettings,
-    canActivate: [AuthGuard, RoleGuard],
-    data: { allowedRoles: ['ADMIN'] }
+    canActivate: [AuthGuard]
   },
   
   // Ruta de desarrollo (componentes)
