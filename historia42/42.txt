@@ -1,0 +1,11 @@
+📋 **HU42: Generar reporte de ventas por vendedor **
+Identificador	HU42
+Nombre	Generar reporte de ventas por vendedor
+Descripción	Como supervisor, quiero generar reportes de ventas por vendedor para evaluar su rendimiento.
+Criterios de aceptación	* El formulario de generación de reportes debe incluir un selector de vendedor, un selector de período bimestral, trimestral, semestral y anual.
+* El botón Generar reporte permanece deshabilitado mientras no se seleccione al menos un vendedor y un período.
+* El sistema debe validar los campos obligatorios al perder el foco. Si el campo queda vacío, se mostrará un mensaje de error "Campo obligatorio".
+* Si el período o el vendedor seleccionado no tienen ventas se muestra el mensaje "¡Ups! No se encontraron datos para este período".
+* Si hay un error en la generación se muestra el mensaje "¡Ups! Hubo un error al generar el reporte. Intenta nuevamente".
+* Al dar clic en Generar reporte se genera en pantalla un reporte con: Ventas totales realizadas por el vendedor en el período seleccionado, cantidad total de pedidos atendidos en el período seleccionado, ventas desglosadas por producto asociadas al vendedor en el período seleccionado y desglose de ventas en el tiempo dentro del período seleccionado.
+* Las ventas desglosadas se construyen en una gráfica distribuida así: El eje X representa unidades de tiempo dentro del período seleccionado (ej. semanas si el período es bimestral), el eje Y representa el monto total de ventas realizadas por el vendedor en cada unidad de tiempo

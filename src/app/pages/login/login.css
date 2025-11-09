@@ -1,0 +1,257 @@
+.login-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Sección izquierda: Branding */
+.login-branding {
+  width: 50%;
+  background: #2E5BFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.branding-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+  width: 100%;
+  max-width: 500px;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.logo {
+  width: 300px;
+  height: auto;
+}
+
+.tagline {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tagline p {
+  font-size: 1.25rem;
+  font-weight: 400;
+  margin: 0;
+  color: white;
+  line-height: 1.5;
+  font-family: 'League Spartan', sans-serif;
+}
+
+/* Sección derecha: Formulario */
+.login-form-section {
+  width: 50%;
+  background: #E0E6F6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 500px;
+  background: transparent;
+}
+
+.form-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #2E5BFF;
+  margin: 0 0 40px 0;
+  text-align: center;
+  font-family: 'League Spartan', sans-serif;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-field-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+  font-family: 'League Spartan', sans-serif;
+}
+
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: #333;
+  font-family: 'League Spartan', sans-serif;
+  box-sizing: border-box;
+  transition: border-color 0.3s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #2E5BFF;
+}
+
+.form-input.ng-invalid.ng-touched {
+  border-color: #f44336;
+}
+
+.form-input::placeholder {
+  color: #999;
+  opacity: 0.7;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.password-toggle:hover {
+  color: #2E5BFF;
+}
+
+.error-message {
+  font-size: 0.875rem;
+  color: #f44336;
+  margin-top: 4px;
+  font-family: 'League Spartan', sans-serif;
+}
+
+.login-button {
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  background: #bdbdbd;
+  color: #424242;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+  font-family: 'League Spartan', sans-serif;
+  margin-top: 8px;
+}
+
+.login-button:disabled {
+  background: #bdbdbd;
+  color: #424242;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-button:not(:disabled) {
+  background: #2E5BFF;
+  color: white;
+}
+
+.login-button:hover:not(:disabled) {
+  background: #1e4acc;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+  .login-container {
+    flex-direction: column;
+  }
+
+  .login-branding {
+    width: 100%;
+    min-height: 40vh;
+    padding: 32px 20px;
+  }
+
+  .branding-content {
+    padding: 0 20px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .logo {
+    width: 250px;
+    height: auto;
+  }
+
+  .tagline {
+    text-align: center;
+  }
+
+  .tagline p {
+    font-size: 1.1rem;
+  }
+
+  .login-form-section {
+    width: 100%;
+    min-height: 60vh;
+    padding: 32px 20px;
+  }
+
+  .form-title {
+    font-size: 1.75rem;
+    margin-bottom: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo {
+    width: 250px;
+    height: auto;
+  }
+
+  .tagline p {
+    font-size: 1rem;
+  }
+
+  .form-title {
+    font-size: 1.5rem;
+  }
+
+  .form-input {
+    padding: 12px 14px;
+  }
+}
+

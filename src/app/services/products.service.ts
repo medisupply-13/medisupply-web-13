@@ -291,6 +291,37 @@ export class ProductsService {
   }
 
   /**
+   * Inserta un nuevo producto usando el endpoint /products/insert
+   * Este endpoint valida e inserta un solo producto
+   */
+  insertProduct(product: {
+    sku: string;
+    name: string;
+    value: number;
+    category_name: string;
+    quantity: number;
+    warehouse_id: number;
+    section?: string;
+    aisle?: string;
+    shelf?: string;
+    level?: string;
+    image_url?: string;
+  }): Observable<any> {
+    const url = `${this.api}products/insert`;
+
+    console.log('🔍 ProductsService: Insertando producto:', product);
+    console.log('🌐 ProductsService: URL:', url);
+
+    return this.http.post<any>(url, product).pipe(
+      tap(data => console.log('📡 ProductsService: Producto insertado:', data)),
+      catchError(error => {
+        console.error('❌ ProductsService: Error al insertar producto:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
    * Actualiza un producto existente
    */
   updateProduct(id: string, product: Partial<Product>): Observable<Product> {

@@ -1,7 +1,7 @@
 <app-page-header [pageTitle]="pageTitle"></app-page-header>
 <div class="cards-grid">
   <app-action-card
-    *ngFor="let card of cards"
+    *ngFor="let card of cards()"
     [titleKey]="card.titleKey"
     [subtitleKey]="card.subtitleKey"
     [icon]="card.icon"

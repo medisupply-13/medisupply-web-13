@@ -1,5 +1,6 @@
-<div class="app-layout">
+<div class="app-layout" [class.login-layout]="isLoginPage()">
   <mat-nav-list
+    *ngIf="!isLoginPage() && isAuthenticated()"
     class="sidebar"
     role="navigation"
     aria-label="Menú principal"
@@ -23,7 +24,7 @@
     }
   </mat-nav-list>
 
-  <main class="content" role="main">
+  <main class="content" [class.full-width]="isLoginPage()" role="main">
     <router-outlet></router-outlet>
   </main>
 </div>
