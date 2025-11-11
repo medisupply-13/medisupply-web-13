@@ -250,9 +250,20 @@ export class UbicacionComponent implements OnInit {
     const p = product as any;
     
     console.log('🔍 Ubicacion: Extrayendo ubicaciones del producto:', product.product_id, 'SKU:', product.sku);
+    console.log('🔍 Ubicacion: Estructura completa del producto recibido:', {
+      product_id: product.product_id,
+      sku: product.sku,
+      hasLocationsField: 'locations' in product,
+      locationsType: typeof backendLocations,
+      locationsValue: backendLocations,
+      locationsIsArray: Array.isArray(backendLocations),
+      locationsLength: Array.isArray(backendLocations) ? backendLocations.length : 'N/A',
+      allProductKeys: Object.keys(product)
+    });
     
     if (!backendLocations || !Array.isArray(backendLocations) || backendLocations.length === 0) {
       console.log('⚠️ Ubicacion: No hay ubicaciones en el backend para este producto');
+      console.log('⚠️ Ubicacion: Detalle - backendLocations existe:', !!backendLocations, ', es array:', Array.isArray(backendLocations), ', longitud:', Array.isArray(backendLocations) ? backendLocations.length : 'N/A');
       return [];
     }
     

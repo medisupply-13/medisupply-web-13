@@ -9,7 +9,13 @@ export interface ValidationResult {
 }
 
 export interface ProviderTemplate {
-  name: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  identificacion: string;
+  telefono: string;
+  nombre_empresa: string;
+  contraseña: string;
 }
 
 @Injectable({
@@ -19,8 +25,8 @@ export class ProviderValidationService {
   private readonly api = environment.baseUrl;
   private readonly maxFileSize = 5 * 1024 * 1024; // 5MB
   private readonly allowedTypes = ['.csv', '.xlsx'];
-  // Solo campo name según la tabla products.Providers
-  private readonly requiredFields = ['name'];
+  // Campos obligatorios para registro de proveedores
+  private readonly requiredFields = ['nombre', 'apellido', 'correo', 'identificacion', 'telefono', 'nombre_empresa', 'contraseña'];
 
   /**
    * Valida un archivo CSV de proveedores
@@ -79,10 +85,13 @@ export class ProviderValidationService {
         }
       }
 
-      // Validar duplicados en el archivo (por nombre)
+      // Validar duplicados en el archivo
       const duplicates = this.findDuplicates(data);
-      if (duplicates.name.length > 0) {
-        errors.push(`Se encontraron nombres duplicados en el archivo: ${duplicates.name.join(', ')}`);
+      if (duplicates.correo.length > 0) {
+        errors.push(`Se encontraron correos duplicados en el archivo: ${duplicates.correo.join(', ')}`);
+      }
+      if (duplicates.identificacion.length > 0) {
+        errors.push(`Se encontraron identificaciones duplicadas en el archivo: ${duplicates.identificacion.join(', ')}`);
       }
 
       return {
@@ -102,21 +111,49 @@ export class ProviderValidationService {
   }
 
   /**
-   * Valida proveedores contra el backend usando el endpoint /providers/upload/validate
+   * Valida proveedores contra el backend usando el endpoint /users/providers/upload/validate
    */
   async validateAgainstBackend(providers: ProviderTemplate[], fileName: string): Promise<ValidationResult> {
     const errors: string[] = [];
     const warnings: string[] = [];
 
     try {
+      // Construir URL correcta - asegurar que baseUrl termine con / y agregar la ruta completa
+      const baseUrl = this.api.endsWith('/') ? this.api : `${this.api}/`;
+      const url = `${baseUrl}users/providers/upload/validate`;
+      
       console.log('=== VALIDAR PROVEEDORES EN BACKEND ===');
-      console.log('URL:', `${this.api}providers/upload/validate`);
+      console.log('Base URL:', this.api);
+      console.log('URL completa construida:', url);
       console.log('Proveedores a validar:', providers.length);
       
       const jsonPayload = JSON.stringify(providers);
-      console.log('Payload JSON:', jsonPayload.substring(0, 500) + '...');
+      console.log('Payload JSON completo:', jsonPayload);
+      console.log('Primeros 500 chars del payload:', jsonPayload.substring(0, 500));
       
-      const response = await fetch(`${this.api}providers/upload/validate`, {
+      // VERIFICACIÓN CRÍTICA: La URL DEBE contener /users/providers/upload/validate
+      // Si no la contiene, significa que se está ejecutando código antiguo en caché
+      if (!url.includes('/users/providers/upload/validate')) {
+        const errorMsg = `❌ ERROR CRÍTICO: URL incorrecta detectada: ${url}. La URL debe ser: ${baseUrl}users/providers/upload/validate. Por favor, limpia el caché del navegador y recarga la página (Ctrl+Shift+R o Cmd+Shift+R).`;
+        console.error(errorMsg);
+        console.error('❌ Esto indica que el navegador está ejecutando código antiguo en caché.');
+        console.error('❌ Solución: 1) Detener el servidor Angular, 2) Limpiar caché del navegador, 3) Reiniciar el servidor, 4) Recargar con Ctrl+Shift+R');
+        errors.push(errorMsg);
+        return { isValid: false, errors, warnings };
+      }
+      
+      // Verificar que NO contenga la URL antigua incorrecta
+      if (url.includes('/providers/upload/validate') && !url.includes('/users/providers/upload/validate')) {
+        const errorMsg = `❌ ERROR: Se detectó la URL antigua incorrecta. Por favor, limpia el caché del navegador completamente.`;
+        console.error(errorMsg);
+        errors.push(errorMsg);
+        return { isValid: false, errors, warnings };
+      }
+      
+      console.log('✅ URL correcta verificada:', url);
+      console.log('✅ Versión del código: 2024-11-11 - URL corregida con /users/providers/');
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -126,6 +163,12 @@ export class ProviderValidationService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('=== ERROR EN RESPUESTA ===');
+        console.error('Status:', response.status);
+        console.error('Status Text:', response.statusText);
+        console.error('URL:', url);
+        console.error('Error Text:', errorText);
+        
         try {
           const errorJson = JSON.parse(errorText);
           if (errorJson.errors && Array.isArray(errorJson.errors)) {
@@ -163,23 +206,46 @@ export class ProviderValidationService {
         data: validatedProviders
       };
 
-    } catch (error) {
-      console.error('Error al validar proveedores en el backend:', error);
-      errors.push('No se pudo conectar con el servidor para validación');
+    } catch (error: any) {
+      console.error('=== ERROR AL VALIDAR PROVEEDORES ===');
+      console.error('Error:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error name:', error?.name);
+      console.error('URL intentada:', `${this.api}users/providers/upload/validate`);
+      
+      // Detectar errores de CORS específicamente
+      if (error?.message?.includes('CORS') || error?.message?.includes('cors')) {
+        errors.push('Error de CORS: El servidor no permite la solicitud desde este origen. Verifica la configuración del backend.');
+      } else if (error?.message?.includes('Failed to fetch') || error?.message?.includes('NetworkError')) {
+        errors.push('Error de red: No se pudo conectar con el servidor. Verifica que el servidor esté disponible y la URL sea correcta.');
+      } else {
+        errors.push(`No se pudo conectar con el servidor para validación: ${error?.message || 'Error desconocido'}`);
+      }
       return { isValid: false, errors, warnings };
     }
   }
 
   /**
-   * Inserta proveedores validados usando el endpoint /providers/upload/insert
+   * Inserta proveedores validados usando el endpoint /users/providers/upload/insert
    */
   async insertValidatedProviders(providers: ProviderTemplate[], fileName: string): Promise<any> {
-    const url = `${this.api}providers/upload/insert`;
+    // Construir URL correcta - asegurar que baseUrl termine con / y agregar la ruta completa
+    const baseUrl = this.api.endsWith('/') ? this.api : `${this.api}/`;
+    const url = `${baseUrl}users/providers/upload/insert`;
     
     console.log('=== INSERT PROVIDERS (POST) ===');
-    console.log('URL:', url);
+    console.log('Base URL:', this.api);
+    console.log('URL completa construida:', url);
     console.log('Proveedores a insertar:', providers.length);
     console.log('Nombre de archivo:', fileName);
+    
+    // Verificar que la URL sea correcta
+    if (!url.includes('/users/providers/upload/insert')) {
+      console.error('❌ ERROR: URL incorrecta detectada:', url);
+      throw new Error(`Error de configuración: URL incorrecta. URL actual: ${url}`);
+    }
+    
+    console.log('✅ URL correcta verificada:', url);
     
     if (providers.length > 0) {
       console.log('Primer proveedor:', JSON.stringify(providers[0], null, 2));
@@ -218,10 +284,11 @@ export class ProviderValidationService {
    */
   generateTemplateCSV(): string {
     const headers = this.requiredFields.join(',');
-    const example1 = `Proveedor ABC`;
-    const example2 = `Proveedor XYZ`;
-    const example3 = `Distribuidora Médica Sur`;
-    return `${headers}\n${example1}\n${example2}\n${example3}`;
+    // Contraseñas en texto plano (el backend las encriptará)
+    // Formato: nombre,apellido,correo,identificacion,telefono,nombre_empresa,contraseña
+    const example1 = `Juan,Pérez,juan.perez@proveedor.com,9001234567,3001234567,Proveedora Médica ABC S.A.,Provider123!`;
+    const example2 = `María,González,maria.gonzalez@proveedor.com,9007654321,3007654321,Distribuidora XYZ S.A.S.,SecurePass456@`;
+    return `${headers}\n${example1}\n${example2}`;
   }
 
   private readFileAsText(file: File): Promise<string> {
@@ -278,7 +345,13 @@ export class ProviderValidationService {
     });
 
     const fieldVariations: { [key: string]: string[] } = {
-      'name': ['name', 'nombre', 'provider_name', 'proveedor', 'razon_social', 'razón_social']
+      'nombre': ['nombre', 'name', 'first_name', 'firstname'],
+      'apellido': ['apellido', 'last_name', 'lastname', 'surname'],
+      'correo': ['correo', 'email', 'e_mail', 'mail'],
+      'identificacion': ['identificacion', 'id', 'documento', 'document', 'cedula', 'dni'],
+      'telefono': ['telefono', 'phone', 'telephone', 'celular', 'mobile'],
+      'nombre_empresa': ['nombre_empresa', 'nombreempresa', 'empresa', 'company', 'company_name', 'razon_social', 'razón_social'],
+      'contraseña': ['contraseña', 'contrasea', 'contrasena', 'password', 'pass', 'passwd']
     };
 
     const missingFields: string[] = [];
@@ -404,9 +477,15 @@ export class ProviderValidationService {
       return undefined;
     };
 
-    // Validar campos requeridos (solo name)
+    // Validar campos requeridos
     const fieldMappings: { [key: string]: string[] } = {
-      'name': ['name', 'nombre', 'provider_name', 'proveedor', 'razon_social', 'razón_social']
+      'nombre': ['nombre', 'name', 'first_name'],
+      'apellido': ['apellido', 'last_name'],
+      'correo': ['correo', 'email'],
+      'identificacion': ['identificacion', 'id', 'documento'],
+      'telefono': ['telefono', 'phone'],
+      'nombre_empresa': ['nombre_empresa', 'nombreempresa', 'empresa', 'company', 'company_name', 'razon_social', 'razón_social'],
+      'contraseña': ['contraseña', 'contrasea', 'contrasena', 'password']
     };
 
     for (const [field, variations] of Object.entries(fieldMappings)) {
@@ -419,6 +498,26 @@ export class ProviderValidationService {
         }
       } else {
         errors.push(`Fila ${rowNum}: Campo ${field} no encontrado`);
+      }
+    }
+
+    // Validar formato de correo
+    const correoIndex = getHeaderIndex('correo', ['correo', 'email']);
+    if (correoIndex !== undefined) {
+      const email = rowData[correoIndex]?.trim();
+      if (email && !this.isValidEmail(email)) {
+        errors.push(`Fila ${rowNum}: El correo "${email}" no es válido`);
+      }
+    }
+
+    // Validar contraseña (mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial)
+    const passwordIndex = getHeaderIndex('contraseña', ['contraseña', 'contrasea', 'contrasena', 'password']);
+    if (passwordIndex !== undefined) {
+      const password = rowData[passwordIndex]?.trim();
+      if (!password || password === '') {
+        errors.push(`Fila ${rowNum}: contraseña es obligatorio`);
+      } else if (!this.isValidPassword(password)) {
+        errors.push(`Fila ${rowNum}: La contraseña debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y carácter especial`);
       }
     }
 
@@ -455,7 +554,13 @@ export class ProviderValidationService {
     });
 
     const fieldMappings: { [key: string]: { variations: string[]; defaultValue?: string } } = {
-      'name': { variations: ['name', 'nombre', 'provider_name', 'proveedor', 'razon_social', 'razón_social'] }
+      'nombre': { variations: ['nombre', 'name', 'first_name'] },
+      'apellido': { variations: ['apellido', 'last_name'] },
+      'correo': { variations: ['correo', 'email'] },
+      'identificacion': { variations: ['identificacion', 'id', 'documento'] },
+      'telefono': { variations: ['telefono', 'phone'] },
+      'nombre_empresa': { variations: ['nombre_empresa', 'nombreempresa', 'empresa', 'company', 'company_name', 'razon_social', 'razón_social'] },
+      'contraseña': { variations: ['contraseña', 'contrasea', 'contrasena', 'password'] }
     };
 
     const provider: any = {};
@@ -516,22 +621,59 @@ export class ProviderValidationService {
     return provider as ProviderTemplate;
   }
 
-  private findDuplicates(data: ProviderTemplate[]): { name: string[] } {
-    const seenName = new Set<string>();
-    const duplicateNames: string[] = [];
+  private findDuplicates(data: ProviderTemplate[]): { correo: string[], identificacion: string[] } {
+    const seenCorreo = new Set<string>();
+    const seenIdentificacion = new Set<string>();
+    const duplicateCorreos: string[] = [];
+    const duplicateIdentificaciones: string[] = [];
 
     for (const provider of data) {
-      const nameKey = provider.name?.toLowerCase().trim();
-      if (nameKey) {
-        if (seenName.has(nameKey)) {
-          duplicateNames.push(provider.name);
+      const correoKey = provider.correo?.toLowerCase().trim();
+      if (correoKey) {
+        if (seenCorreo.has(correoKey)) {
+          duplicateCorreos.push(provider.correo);
         } else {
-          seenName.add(nameKey);
+          seenCorreo.add(correoKey);
+        }
+      }
+
+      const identificacionKey = provider.identificacion?.trim();
+      if (identificacionKey) {
+        if (seenIdentificacion.has(identificacionKey)) {
+          duplicateIdentificaciones.push(provider.identificacion);
+        } else {
+          seenIdentificacion.add(identificacionKey);
         }
       }
     }
 
-    return { name: duplicateNames };
+    return { correo: duplicateCorreos, identificacion: duplicateIdentificaciones };
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  /**
+   * Valida que la contraseña cumpla con los requisitos:
+   * - Mínimo 8 caracteres
+   * - Al menos una mayúscula
+   * - Al menos una minúscula
+   * - Al menos un número
+   * - Al menos un carácter especial
+   */
+  private isValidPassword(password: string): boolean {
+    if (password.length < 8) {
+      return false;
+    }
+    
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    return hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
   }
 }
 
