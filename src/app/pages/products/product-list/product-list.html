@@ -206,7 +206,7 @@
             <th mat-header-cell *matHeaderCellDef mat-sort-header="value">{{ 'productPriceColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <div class="product-price">
-                {{ getConvertedPrice(product) | currency:currencySymbol():'symbol':'1.0-0' }}
+                {{ formatPrice(getConvertedPrice(product)) }}
               </div>
             </td>
           </ng-container>
