@@ -28,41 +28,41 @@ export interface AddProductDialogData {
   ],
   template: `
     <div class="add-dialog">
-      <h2 mat-dialog-title>Agregar Producto</h2>
+      <h2 mat-dialog-title>{{ 'addProductDialogTitle' | translate }}</h2>
       
       <mat-dialog-content>
         <form #productForm="ngForm" class="product-form">
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>SKU *</mat-label>
+            <mat-label>{{ 'addProductSkuLabel' | translate }}</mat-label>
             <input 
               matInput 
               [(ngModel)]="newProduct.sku" 
               name="sku"
               required
-              placeholder="Ingrese el SKU del producto"
+              [placeholder]="'addProductSkuPlaceholder' | translate"
               #skuInput="ngModel">
             <mat-error *ngIf="skuInput.invalid && skuInput.touched">
-              El SKU es requerido
+              {{ 'addProductSkuRequired' | translate }}
             </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Nombre *</mat-label>
+            <mat-label>{{ 'addProductNameLabel' | translate }}</mat-label>
             <input 
               matInput 
               [(ngModel)]="newProduct.name" 
               name="name"
               required
-              placeholder="Ingrese el nombre del producto"
+              [placeholder]="'addProductNamePlaceholder' | translate"
               #nameInput="ngModel">
             <mat-error *ngIf="nameInput.invalid && nameInput.touched">
-              El nombre es requerido
+              {{ 'addProductNameRequired' | translate }}
             </mat-error>
           </mat-form-field>
 
           <div class="form-row">
             <mat-form-field appearance="outline" class="half-width">
-              <mat-label>Precio *</mat-label>
+              <mat-label>{{ 'addProductPriceLabel' | translate }}</mat-label>
               <input 
                 matInput 
                 type="number" 
@@ -75,12 +75,12 @@ export interface AddProductDialogData {
                 #valueInput="ngModel">
               <span matPrefix>$&nbsp;</span>
               <mat-error *ngIf="valueInput.invalid && valueInput.touched">
-                El precio debe ser mayor a 0
+                {{ 'addProductPriceRequired' | translate }}
               </mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="half-width">
-              <mat-label>Stock Total *</mat-label>
+              <mat-label>{{ 'addProductStockLabel' | translate }}</mat-label>
               <input 
                 matInput 
                 type="number" 
@@ -91,36 +91,36 @@ export interface AddProductDialogData {
                 placeholder="0"
                 #quantityInput="ngModel">
               <mat-error *ngIf="quantityInput.invalid && quantityInput.touched">
-                El stock total debe ser mayor o igual a 0
+                {{ 'addProductStockRequired' | translate }}
               </mat-error>
             </mat-form-field>
           </div>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Categoría *</mat-label>
+            <mat-label>{{ 'addProductCategoryLabel' | translate }}</mat-label>
             <mat-select 
               [(ngModel)]="newProduct.category_name" 
               name="category_name"
               required
-              placeholder="Seleccione una categoría"
+              [placeholder]="'addProductCategoryPlaceholder' | translate"
               #categoryInput="ngModel">
               <mat-option *ngFor="let category of data.categories" [value]="category">
                 {{ category }}
               </mat-option>
             </mat-select>
             <mat-error *ngIf="categoryInput.invalid && categoryInput.touched">
-              La categoría es requerida
+              {{ 'addProductCategoryRequired' | translate }}
             </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>URL de Imagen</mat-label>
+            <mat-label>{{ 'addProductImageUrlLabel' | translate }}</mat-label>
             <input 
               matInput 
               [(ngModel)]="newProduct.image_url" 
               name="image_url"
               type="url"
-              placeholder="https://ejemplo.com/imagen.jpg">
+              [placeholder]="'addProductImageUrlPlaceholder' | translate">
           </mat-form-field>
 
           <!-- Campos de Ubicación -->
@@ -133,7 +133,7 @@ export interface AddProductDialogData {
                   matInput 
                   [(ngModel)]="locationData.section" 
                   name="section"
-                  placeholder="{{ 'locationSection' | translate }}">
+                  [placeholder]="'locationSection' | translate">
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="quarter-width">
@@ -142,7 +142,7 @@ export interface AddProductDialogData {
                   matInput 
                   [(ngModel)]="locationData.aisle" 
                   name="aisle"
-                  placeholder="{{ 'locationAisle' | translate }}">
+                  [placeholder]="'locationAisle' | translate">
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="quarter-width">
@@ -151,7 +151,7 @@ export interface AddProductDialogData {
                   matInput 
                   [(ngModel)]="locationData.shelf" 
                   name="shelf"
-                  placeholder="{{ 'locationShelf' | translate }}">
+                  [placeholder]="'locationShelf' | translate">
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="quarter-width">
@@ -160,7 +160,7 @@ export interface AddProductDialogData {
                   matInput 
                   [(ngModel)]="locationData.level" 
                   name="level"
-                  placeholder="{{ 'locationLevel' | translate }}">
+                  [placeholder]="'locationLevel' | translate">
               </mat-form-field>
             </div>
           </div>
@@ -169,14 +169,14 @@ export interface AddProductDialogData {
       
       <mat-dialog-actions align="end">
         <button mat-button (click)="onCancel()">
-          Cancelar
+          {{ 'addProductCancelButton' | translate }}
         </button>
         <button 
           mat-flat-button 
           color="primary"
           [disabled]="!productForm.form.valid"
           (click)="onSave()">
-          Crear Producto
+          {{ 'addProductCreateButton' | translate }}
         </button>
       </mat-dialog-actions>
     </div>
