@@ -172,22 +172,44 @@ export class LocationService {
       'Content-Type': 'application/json'
     };
     
-    // Para API Gateway, no usar HttpParams en las opciones si ya construimos la URL manualmente
-    // Para ELB, usar HttpParams normalmente
+    // CRÍTICO: Para API Gateway, usar 'body' para que Angular parsee automáticamente el JSON
+    // Para ELB, usar 'response' para tener más control
     const httpOptions: any = { 
       headers,
-      responseType: 'json' as const,
-      observe: 'response' as const
+      responseType: 'json' as const
     };
     
-    if (!isApiGateway) {
-      // Solo usar HttpParams para ELB
+    if (isApiGateway) {
+      // Para API Gateway, usar 'body' para obtener directamente el objeto parseado
+      // Esto evita problemas con la extracción del body de HttpResponse
+      httpOptions.observe = 'body' as const;
+      console.log('🔵 LocationService: API Gateway - Usando observe: body para parsing automático');
+    } else {
+      // Para ELB, usar 'response' y HttpParams normalmente
+      httpOptions.observe = 'response' as const;
       httpOptions.params = httpParams;
+      console.log('🟢 LocationService: ELB - Usando observe: response con HttpParams');
     }
     
     return this.http.get<any>(url, httpOptions).pipe(
       tap((response) => {
-        const resBody: any = (response as any)?.body ?? response;
+        // CRÍTICO: Con observe: 'body', Angular ya nos devuelve el objeto parseado directamente
+        // Con observe: 'response', necesitamos extraer el body de HttpResponse
+        let resBody: any;
+        
+        if (isApiGateway) {
+          // Para API Gateway con observe: 'body', la respuesta ya es el objeto parseado
+          resBody = response;
+          console.log('🔵 LocationService: API Gateway con observe:body - Respuesta ya es el objeto parseado');
+          console.log('🔵 LocationService: Tipo de response:', typeof resBody);
+          console.log('🔵 LocationService: Es array?:', Array.isArray(resBody));
+          console.log('🔵 LocationService: Keys de response:', resBody ? Object.keys(resBody) : 'null');
+        } else {
+          // Para ELB con observe: 'response', extraer el body
+          resBody = (response as any)?.body ?? response;
+          console.log('🟢 LocationService: ELB con observe:response - Extrayendo body de HttpResponse');
+        }
+        
         const endTime = performance.now();
         const duration = endTime - startTime;
         const durationSeconds = duration / 1000;
@@ -199,17 +221,42 @@ export class LocationService {
         console.log('⏰ LocationService: Duración total (segundos):', Math.round(durationSeconds * 100) / 100);
         console.log('📊 LocationService: Status HTTP: 200 OK');
         console.log('📦 LocationService: Productos recibidos:', resBody?.products?.length || 0);
+        console.log('🔍 LocationService: Tipo de resBody:', typeof resBody);
+        console.log('🔍 LocationService: resBody es array?:', Array.isArray(resBody));
+        console.log('🔍 LocationService: Keys de resBody:', resBody ? Object.keys(resBody) : 'null');
         
-        // Verificar el tipo de respuesta
-        console.log('🔍 LocationService: Tipo de respuesta:', typeof resBody);
-        console.log('🔍 LocationService: Es array?:', Array.isArray(resBody));
-        console.log('🔍 LocationService: Keys de respuesta:', resBody ? Object.keys(resBody) : 'null');
+        // LOG CRÍTICO: Para API Gateway, mostrar la respuesta RAW del primer producto
+        if (isApiGateway && resBody?.products && resBody.products.length > 0) {
+          console.log('🔵 LocationService: ===== RESPUESTA RAW DEL API GATEWAY (PRIMER PRODUCTO) =====');
+          console.log('🔵 LocationService: Primer producto COMPLETO (RAW):', JSON.stringify(resBody.products[0], null, 2));
+          console.log('🔵 LocationService: ¿Tiene array locations?:', Array.isArray(resBody.products[0].locations));
+          if (Array.isArray(resBody.products[0].locations) && resBody.products[0].locations.length > 0) {
+            console.log('🔵 LocationService: Primera ubicación del array (RAW):', JSON.stringify(resBody.products[0].locations[0], null, 2));
+            console.log('🔵 LocationService: Campos de ubicación en RAW:', {
+              section: resBody.products[0].locations[0].section,
+              aisle: resBody.products[0].locations[0].aisle,
+              shelf: resBody.products[0].locations[0].shelf,
+              level: resBody.products[0].locations[0].level,
+              lote: resBody.products[0].locations[0].lote
+            });
+          } else {
+            console.log('🔵 LocationService: Primer producto NO tiene array locations');
+            console.log('🔵 LocationService: Campos aplanados en producto:', {
+              lote: resBody.products[0].lote,
+              section: resBody.products[0].section,
+              aisle: resBody.products[0].aisle,
+              shelf: resBody.products[0].shelf,
+              level: resBody.products[0].level
+            });
+          }
+          console.log('🔵 LocationService: ===== FIN RESPUESTA RAW =====');
+        }
         
         // Intentar parsear la respuesta si viene como string (problema común con API Gateway)
         let parsedResponse: WarehouseProductsResponse = resBody as WarehouseProductsResponse;
         if (typeof resBody === 'string') {
           try {
-            console.log('⚠️ LocationService: Respuesta es string, parseando JSON...');
+            console.log('⚠️ LocationService: resBody es string, parseando JSON...');
             parsedResponse = JSON.parse(resBody);
             console.log('✅ LocationService: JSON parseado exitosamente');
           } catch (e) {
@@ -227,6 +274,16 @@ export class LocationService {
         if (parsedResponse && !parsedResponse.products && (parsedResponse as any).data) {
           console.log('⚠️ LocationService: Respuesta en data, extrayendo...');
           parsedResponse = (parsedResponse as any).data;
+        }
+        
+        // NUEVO: Verificar si la respuesta es directamente un array de productos (formato alternativo)
+        if (parsedResponse && Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+          console.log('⚠️ LocationService: Respuesta es array directo de productos, envolviendo...');
+          parsedResponse = {
+            success: true,
+            warehouse_id: warehouseId,
+            products: parsedResponse
+          } as WarehouseProductsResponse;
         }
         
         // Log completo de la estructura
@@ -336,10 +393,28 @@ export class LocationService {
       }),
       // Mapear la respuesta para asegurar que siempre tenga la estructura correcta
       map((resp: any): WarehouseProductsResponse => {
-        let response: any = (resp?.body ?? resp);
-        console.log('🔄 LocationService: Iniciando mapeo de respuesta...');
-        console.log('🔄 LocationService: Tipo de respuesta en map:', typeof response);
-        console.log('🔄 LocationService: Respuesta es array?:', Array.isArray(response));
+        console.log('🔄 LocationService: ===== INICIANDO MAPEO DE RESPUESTA =====');
+        console.log('🔄 LocationService: Tipo de backend:', isApiGateway ? 'API Gateway' : 'ELB');
+        
+        // Para API Gateway con observe: 'body', la respuesta ya es el objeto parseado
+        // Para ELB con observe: 'response', necesitamos extraer el body
+        let response: any;
+        if (isApiGateway) {
+          // Con observe: 'body', Angular ya parseó el JSON y nos da el objeto directamente
+          response = resp;
+          console.log('🔵 LocationService (map): API Gateway con observe:body - Respuesta ya es objeto parseado');
+          console.log('🔵 LocationService (map): Tipo de resp:', typeof response);
+          console.log('🔵 LocationService (map): Es array?:', Array.isArray(response));
+          console.log('🔵 LocationService (map): Keys de resp:', response ? Object.keys(response) : 'null');
+        } else {
+          // Con observe: 'response', extraer el body de HttpResponse
+          response = (resp?.body ?? resp);
+          console.log('🟢 LocationService (map): ELB con observe:response - Extrayendo body');
+        }
+        
+        console.log('🔄 LocationService: Tipo de response en map:', typeof response);
+        console.log('🔄 LocationService: Response es array?:', Array.isArray(response));
+        console.log('🔄 LocationService: Keys de response:', response ? Object.keys(response) : 'null');
         
         // Si la respuesta es un string, parsearla
         if (typeof response === 'string') {
@@ -354,7 +429,7 @@ export class LocationService {
         }
         
         // Si la respuesta está envuelta en body o data, extraerla
-        if (response && !response.products) {
+        if (response && !response.products && !Array.isArray(response)) {
           console.log('⚠️ LocationService: Respuesta no tiene products directamente, buscando en body/data...');
           console.log('⚠️ LocationService: Keys de respuesta:', Object.keys(response));
           if (response.body) {
@@ -368,6 +443,16 @@ export class LocationService {
             console.log('✅ LocationService: Encontrado en Items (formato Lambda), extrayendo...');
             response = { products: response.Items };
           }
+        }
+        
+        // Verificar si la respuesta es directamente un array de productos
+        if (response && Array.isArray(response) && response.length > 0) {
+          console.log('⚠️ LocationService: Respuesta es array directo de productos, envolviendo...');
+          response = {
+            success: true,
+            warehouse_id: warehouseId,
+            products: response
+          } as WarehouseProductsResponse;
         }
         
         // Asegurar que la respuesta tenga la estructura correcta
@@ -394,45 +479,268 @@ export class LocationService {
           };
         }
         
-        // Verificar si los productos tienen ubicaciones
-        const productsWithLocations = response.products.filter((p: any) => p.locations && Array.isArray(p.locations) && p.locations.length > 0);
-        console.log('📊 LocationService: Después del mapeo - Productos con ubicaciones:', productsWithLocations.length, 'de', response.products.length);
+        // NORMALIZAR PRODUCTOS: Asegurar que las ubicaciones estén en el formato correcto
+        console.log('🔄 LocationService: Normalizando productos y ubicaciones...');
+        console.log('🔄 LocationService: Total de productos a normalizar:', response.products.length);
         
-        if (isApiGateway && productsWithLocations.length === 0 && response.products.length > 0) {
-          console.error('❌ LocationService: ERROR CRÍTICO - API Gateway devolvió productos pero SIN ubicaciones');
+        // LOG CRÍTICO: Verificar el primer producto ANTES de normalizar
+        if (response.products.length > 0 && isApiGateway) {
+          const firstProductRaw = response.products[0];
+          console.log('🔵 LocationService: PRIMER PRODUCTO RAW (ANTES DE NORMALIZAR) - API Gateway:');
+          console.log('🔵 LocationService: Producto completo:', JSON.stringify(firstProductRaw, null, 2));
+          console.log('🔵 LocationService: Tiene campo locations?:', 'locations' in firstProductRaw);
+          console.log('🔵 LocationService: Valor de locations:', firstProductRaw.locations);
+          console.log('🔵 LocationService: Tipo de locations:', typeof firstProductRaw.locations);
+          console.log('🔵 LocationService: Es array?:', Array.isArray(firstProductRaw.locations));
+          console.log('🔵 LocationService: Todas las keys del producto:', Object.keys(firstProductRaw));
+          
+          // Buscar cualquier campo que pueda contener ubicaciones
+          Object.keys(firstProductRaw).forEach(key => {
+            const value = firstProductRaw[key];
+            if (typeof value === 'object' && value !== null) {
+              console.log(`🔵 LocationService: Campo "${key}":`, {
+                tipo: typeof value,
+                esArray: Array.isArray(value),
+                valor: JSON.stringify(value).substring(0, 200)
+              });
+            }
+          });
+        }
+        
+        const normalizedProducts = response.products.map((product: any, index: number) => {
+          // Crear una copia del producto para no modificar el original
+          const normalizedProduct = { ...product };
+          
+          // LOG CRÍTICO: Para API Gateway, analizar TODOS los productos para entender la estructura
+          const hasLote = normalizedProduct.lote !== undefined && normalizedProduct.lote !== null;
+          const hasLocationFields = normalizedProduct.section !== undefined || normalizedProduct.aisle !== undefined || normalizedProduct.shelf !== undefined || normalizedProduct.level !== undefined;
+          const hasLocationsArray = normalizedProduct.locations && Array.isArray(normalizedProduct.locations) && normalizedProduct.locations.length > 0;
+          
+          // Para API Gateway, hacer log de los primeros productos para entender la estructura
+          if (isApiGateway && index < 5) {
+            console.log(`🔵 LocationService: ===== Producto ${index} (SKU: ${normalizedProduct.sku}, ID: ${normalizedProduct.product_id}) =====`);
+            console.log(`🔵 LocationService: - Tiene array locations?:`, hasLocationsArray);
+            if (hasLocationsArray) {
+              console.log(`🔵 LocationService: - Array locations (primeros 500 chars):`, JSON.stringify(normalizedProduct.locations, null, 2).substring(0, 500));
+            }
+            console.log(`🔵 LocationService: - Campos en producto:`, {
+              lote: normalizedProduct.lote,
+              section: normalizedProduct.section,
+              aisle: normalizedProduct.aisle,
+              shelf: normalizedProduct.shelf,
+              level: normalizedProduct.level,
+              quantity: normalizedProduct.quantity
+            });
+            console.log(`🔵 LocationService: - Todas las keys del producto (${Object.keys(normalizedProduct).length}):`, Object.keys(normalizedProduct));
+          }
+          
+          // CRÍTICO: El API Gateway puede devolver los datos de dos formas:
+          // 1. Con array locations completo (como Zoplicona)
+          // 2. Con campos aplanados en el producto (sin array locations)
+          // Necesitamos manejar ambos casos
+          
+          if (!hasLocationsArray) {
+            // Caso 1: No hay array locations - buscar campos aplanados en el producto
+            if (hasLote || hasLocationFields) {
+              // El API Gateway aplanó las ubicaciones - reconstruir el array
+              console.log(`🔵 LocationService: Producto ${index} (SKU: ${normalizedProduct.sku}) - API Gateway aplanó ubicaciones, reconstruyendo array...`);
+              
+              // Construir objeto de ubicación a partir de los campos del producto
+              // IMPORTANTE: El API Gateway puede no incluir section, aisle, shelf, level cuando aplana
+              // Si no están en el producto, los dejamos como strings vacíos (el backend los tiene null)
+              const locationObj: any = {
+                section: normalizedProduct.section !== undefined ? (normalizedProduct.section || '') : '',
+                aisle: normalizedProduct.aisle !== undefined ? (normalizedProduct.aisle || '') : '',
+                shelf: normalizedProduct.shelf !== undefined ? (normalizedProduct.shelf || '') : '',
+                level: normalizedProduct.level !== undefined ? (normalizedProduct.level || '') : '',
+                lote: normalizedProduct.lote || '',
+                expiry_date: normalizedProduct.expiry_date !== undefined ? normalizedProduct.expiry_date : null,
+                quantity: normalizedProduct.quantity || 0,
+                reserved_quantity: normalizedProduct.reserved_quantity || 0
+              };
+              
+              // Agregar campos adicionales si existen
+              if (normalizedProduct.city_id !== undefined) locationObj.city_id = normalizedProduct.city_id;
+              if (normalizedProduct.city_name !== undefined) locationObj.city_name = normalizedProduct.city_name;
+              if (normalizedProduct.country !== undefined) locationObj.country = normalizedProduct.country;
+              locationObj.warehouse_id = normalizedProduct.warehouse_id || warehouseId;
+              if (normalizedProduct.warehouse_name !== undefined) locationObj.warehouse_name = normalizedProduct.warehouse_name;
+              
+              normalizedProduct.locations = [locationObj];
+              
+              if (isApiGateway && index < 5) {
+                console.log(`🔵 LocationService: Producto ${index} (SKU: ${normalizedProduct.sku}) - Array locations reconstruido:`, JSON.stringify(normalizedProduct.locations, null, 2));
+              }
+            } else {
+              // No hay información de ubicación - inicializar como array vacío
+              normalizedProduct.locations = [];
+            }
+          } else {
+            // Caso 2: Ya hay array locations - verificar que esté completo
+            console.log(`🔵 LocationService: Producto ${index} (SKU: ${normalizedProduct.sku}) - Ya tiene array locations con ${normalizedProduct.locations.length} elemento(s)`);
+            if (isApiGateway && normalizedProduct.locations.length > 0) {
+              console.log(`🔵 LocationService: Primera ubicación del array:`, JSON.stringify(normalizedProduct.locations[0], null, 2));
+            }
+          }
+          
+          // Si el producto tiene ubicaciones (ya sea array original o reconstruido), normalizarlas
+          if (normalizedProduct.locations !== undefined && normalizedProduct.locations !== null) {
+            // Si locations es un string (JSON serializado), parsearlo
+            if (typeof normalizedProduct.locations === 'string') {
+              try {
+                console.log(`⚠️ LocationService: Producto ${index} - locations es string, parseando...`);
+                normalizedProduct.locations = JSON.parse(normalizedProduct.locations);
+                console.log(`✅ LocationService: Producto ${index} - locations parseado exitosamente`);
+              } catch (e) {
+                console.error(`❌ LocationService: Producto ${index} - Error al parsear locations:`, e);
+                console.error(`❌ LocationService: Producto ${index} - String que falló:`, normalizedProduct.locations?.substring(0, 200));
+                normalizedProduct.locations = [];
+              }
+            }
+            
+            // Asegurar que locations sea un array
+            if (!Array.isArray(normalizedProduct.locations)) {
+              console.warn(`⚠️ LocationService: Producto ${index} - locations no es array, convirtiendo...`);
+              console.warn(`⚠️ LocationService: Producto ${index} - Tipo de locations:`, typeof normalizedProduct.locations);
+              console.warn(`⚠️ LocationService: Producto ${index} - Valor de locations:`, normalizedProduct.locations);
+              
+              // Si es un objeto, convertirlo a array
+              if (typeof normalizedProduct.locations === 'object' && normalizedProduct.locations !== null) {
+                normalizedProduct.locations = [normalizedProduct.locations];
+                console.log(`✅ LocationService: Producto ${index} - Objeto convertido a array con 1 elemento`);
+              } else {
+                console.warn(`⚠️ LocationService: Producto ${index} - locations no es objeto válido, inicializando como array vacío`);
+                normalizedProduct.locations = [];
+              }
+            }
+            
+            // LOG: Verificar estado después de asegurar que es array
+            if (index === 0 && isApiGateway) {
+              console.log('🔵 LocationService: Después de asegurar array - Longitud:', normalizedProduct.locations?.length || 0);
+              if (normalizedProduct.locations && normalizedProduct.locations.length > 0) {
+                console.log('🔵 LocationService: Primera ubicación RAW:', JSON.stringify(normalizedProduct.locations[0], null, 2));
+              }
+            }
+            
+            // Normalizar cada ubicación SOLO si el array tiene elementos
+            if (Array.isArray(normalizedProduct.locations) && normalizedProduct.locations.length > 0) {
+              const originalLength = normalizedProduct.locations.length;
+              
+              // Función helper para obtener campos preservando valores reales (incluso null o strings vacíos)
+              const getField = (primary: any, ...alternatives: any[]) => {
+                // Buscar el primer valor que no sea undefined
+                for (const val of [primary, ...alternatives]) {
+                  if (val !== undefined) {
+                    // Preservar el valor tal cual, incluso si es null, string vacío, o 0
+                    // Solo convertir null a string vacío para campos de texto
+                    if (val === null) {
+                      return '';
+                    }
+                    return val;
+                  }
+                }
+                return '';
+              };
+              
+              normalizedProduct.locations = normalizedProduct.locations.map((loc: any, locIndex: number) => {
+                // LOG para productos con ubicaciones completas (primeros 3 productos)
+                if (isApiGateway && index < 3 && locIndex === 0) {
+                  console.log(`🔵 LocationService: Producto ${index} (SKU: ${normalizedProduct.sku}) - Ubicación ANTES de normalizar:`, JSON.stringify(loc, null, 2));
+                }
+                
+                // Normalizar nombres de campos (pueden venir en diferentes casos)
+                // CRÍTICO: Preservar los valores reales (strings como "2", "3", "A", etc.)
+                const normalizedLoc = {
+                  section: getField(loc.section, loc.Section, loc.section_name),
+                  aisle: getField(loc.aisle, loc.Aisle, loc.aisle_name),
+                  shelf: getField(loc.shelf, loc.Shelf, loc.shelf_name),
+                  level: getField(loc.level, loc.Level, loc.level_name),
+                  lot: getField(loc.lote, loc.lot, loc.Lote, loc.Lot, loc.lote_number, loc.lotNumber),
+                  expires: getField(loc.expiry_date, loc.expires, loc.ExpiryDate, loc.expiration_date),
+                  available: loc.quantity !== undefined ? (loc.quantity || 0) : (loc.available !== undefined ? (loc.available || 0) : (loc.Available || loc.available_quantity || 0)),
+                  reserved: loc.reserved_quantity !== undefined ? (loc.reserved_quantity || 0) : (loc.reserved !== undefined ? (loc.reserved || 0) : (loc.ReservedQuantity || loc.Reserved || loc.reserved_qty || 0))
+                };
+                
+                // LOG para productos con ubicaciones completas después de normalizar
+                if (isApiGateway && index < 3 && locIndex === 0) {
+                  console.log(`🔵 LocationService: Producto ${index} (SKU: ${normalizedProduct.sku}) - Ubicación DESPUÉS de normalizar:`, JSON.stringify(normalizedLoc, null, 2));
+                  console.log(`🔵 LocationService: Valores críticos preservados:`, {
+                    section: `"${normalizedLoc.section}" (tipo: ${typeof normalizedLoc.section})`,
+                    aisle: `"${normalizedLoc.aisle}" (tipo: ${typeof normalizedLoc.aisle})`,
+                    shelf: `"${normalizedLoc.shelf}" (tipo: ${typeof normalizedLoc.shelf})`,
+                    level: `"${normalizedLoc.level}" (tipo: ${typeof normalizedLoc.level})`,
+                    lot: `"${normalizedLoc.lot}" (tipo: ${typeof normalizedLoc.lot})`
+                  });
+                }
+                
+                return normalizedLoc;
+              });
+              // NO filtrar ubicaciones aquí - el componente decidirá qué mostrar
+              // Solo asegurar que el array no esté vacío si había ubicaciones
+              
+              if (index === 0 && isApiGateway) {
+                console.log(`🔵 LocationService: Ubicaciones normalizadas: ${normalizedProduct.locations.length} de ${originalLength} originales`);
+              }
+            } else {
+              if (index === 0 && isApiGateway) {
+                console.warn('⚠️ LocationService: Array de ubicaciones está VACÍO después de asegurar que es array');
+              }
+            }
+          } else {
+            // Si no tiene locations, inicializar como array vacío
+            if (index === 0 && isApiGateway) {
+              console.warn('⚠️ LocationService: Producto no tiene campo locations o es null/undefined');
+            }
+            normalizedProduct.locations = [];
+          }
+          
+          // LOG final para el primer producto
+          if (index === 0 && isApiGateway) {
+            console.log('🔵 LocationService: ===== PRODUCTO DESPUÉS DE NORMALIZAR (índice 0) =====');
+            console.log('🔵 LocationService: locations después de normalizar:', normalizedProduct.locations);
+            console.log('🔵 LocationService: Longitud final:', normalizedProduct.locations?.length || 0);
+          }
+          
+          return normalizedProduct;
+        });
+        
+        // Crear respuesta normalizada
+        const normalizedResponse: WarehouseProductsResponse = {
+          success: response.success !== undefined ? response.success : true,
+          warehouse_id: response.warehouse_id || warehouseId,
+          products: normalizedProducts
+        };
+        
+        // Verificar si los productos tienen ubicaciones después de la normalización
+        const productsWithLocations = normalizedResponse.products.filter((p: any) => 
+          p.locations && Array.isArray(p.locations) && p.locations.length > 0
+        );
+        console.log('📊 LocationService: Después de normalización - Productos con ubicaciones:', productsWithLocations.length, 'de', normalizedResponse.products.length);
+        
+        if (isApiGateway && productsWithLocations.length === 0 && normalizedResponse.products.length > 0) {
+          console.error('❌ LocationService: ERROR CRÍTICO - API Gateway devolvió productos pero SIN ubicaciones después de normalización');
           console.error('❌ LocationService: URL que se envió:', url);
           console.error('❌ LocationService: Parámetro include_locations en URL:', url.includes('include_locations=true'));
-          console.error('❌ LocationService: Esto indica que el parámetro include_locations=true NO está siendo procesado correctamente por el backend');
-          console.error('❌ LocationService: Verificar en la pestaña Network del navegador:');
-          console.error('  1. ¿La URL incluye include_locations=true?');
-          console.error('  2. ¿La respuesta del API Gateway tiene las ubicaciones?');
-          console.error('  3. ¿Hay algún error en la consola del navegador?');
-          console.error('❌ LocationService: PROBLEMA EN EL BACKEND - El backend NO está devolviendo ubicaciones aunque se solicitó');
           
           // Mostrar el primer producto para debugging
-          if (response.products.length > 0) {
-            const firstProd = response.products[0] as any;
-            console.error('❌ LocationService: Primer producto recibido (completo):', JSON.stringify(firstProd, null, 2));
+          if (normalizedResponse.products.length > 0) {
+            const firstProd = normalizedResponse.products[0] as any;
+            console.error('❌ LocationService: Primer producto después de normalización (completo):', JSON.stringify(firstProd, null, 2));
             console.error('❌ LocationService: Primer producto resumido:', {
               id: firstProd.product_id,
               sku: firstProd.sku,
               tieneLocations: 'locations' in firstProd,
               locations: firstProd.locations,
               locationsType: typeof firstProd.locations,
-              allKeys: Object.keys(firstProd),
-              valoresTodosLosCampos: Object.keys(firstProd).reduce((acc: any, key) => {
-                acc[key] = {
-                  type: typeof firstProd[key],
-                  value: firstProd[key],
-                  isArray: Array.isArray(firstProd[key])
-                };
-                return acc;
-              }, {})
+              locationsIsArray: Array.isArray(firstProd.locations),
+              locationsLength: Array.isArray(firstProd.locations) ? firstProd.locations.length : 'N/A',
+              allKeys: Object.keys(firstProd)
             });
           }
         }
         
-        return response as WarehouseProductsResponse;
+        console.log('✅ LocationService: ===== MAPEO COMPLETADO =====');
+        return normalizedResponse;
       }),
       catchError((error) => {
         const endTime = performance.now();

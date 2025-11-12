@@ -196,19 +196,19 @@
         <div class="location-grid">
           <div class="location-item">
             <span class="location-label">{{ 'locationSection' | translate }}</span>
-            <span class="location-value">{{ selectedProduct.locations[0].section }}</span>
+            <span class="location-value">{{ selectedProduct.locations[0].section || ('notAvailable' | translate) }}</span>
           </div>
           <div class="location-item">
             <span class="location-label">{{ 'locationAisle' | translate }}</span>
-            <span class="location-value">{{ selectedProduct.locations[0].aisle }}</span>
+            <span class="location-value">{{ selectedProduct.locations[0].aisle || ('notAvailable' | translate) }}</span>
           </div>
           <div class="location-item">
             <span class="location-label">{{ 'locationShelf' | translate }}</span>
-            <span class="location-value">{{ selectedProduct.locations[0].shelf }}</span>
+            <span class="location-value">{{ selectedProduct.locations[0].shelf || ('notAvailable' | translate) }}</span>
           </div>
           <div class="location-item">
             <span class="location-label">{{ 'locationLevel' | translate }}</span>
-            <span class="location-value">{{ selectedProduct.locations[0].level }}</span>
+            <span class="location-value">{{ selectedProduct.locations[0].level || ('notAvailable' | translate) }}</span>
           </div>
         </div>
       </div>
