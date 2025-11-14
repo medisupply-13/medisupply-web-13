@@ -54,9 +54,9 @@ export class AuthService {
   isAuthenticated = computed(() => this.currentUser() !== null);
   readonly userRole = computed(() => this.currentUser()?.role || null);
 
-  // Timer de inactividad (5 minutos = 300000 ms)
+  // Timer de inactividad (10 minutos = 600000 ms)
   private inactivityTimer: any = null;
-  private readonly INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutos en milisegundos
+  private readonly INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutos en milisegundos
   private activityListeners: (() => void)[] = [];
 
   constructor(
@@ -324,7 +324,7 @@ export class AuthService {
     }
 
     this.inactivityTimer = setTimeout(() => {
-      console.warn('⏱️ AuthService: Tiempo de inactividad agotado (5 minutos)');
+      console.warn('⏱️ AuthService: Tiempo de inactividad agotado (10 minutos)');
       console.warn('🔒 AuthService: Cerrando sesión automáticamente...');
       
       // Cerrar sesión automáticamente

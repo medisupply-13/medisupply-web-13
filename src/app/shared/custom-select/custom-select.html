@@ -33,6 +33,7 @@
   role="listbox"
   [attr.id]="selectId + '-options'"
   [attr.aria-labelledby]="selectId"
+  [style.maxHeight.px]="maxOptionsHeight"
 >
   @for (opt of options; track opt.value) {
     <li

@@ -685,7 +685,7 @@ export class ProductList implements OnInit, AfterViewInit {
     // Usar el formato de moneda con el símbolo correcto según el país
     const country = localStorage.getItem('userCountry') || 'CO';
     const currency = this.currencySymbol();
-    
+
     // Formatear según el país
     const localeMap: Record<string, string> = {
       'CO': 'es-CO',
@@ -693,41 +693,20 @@ export class ProductList implements OnInit, AfterViewInit {
       'EC': 'es-EC',
       'MX': 'es-MX'
     };
-    
+
     const locale = localeMap[country] || 'es-CO';
-    
+
     // Para valores muy pequeños, mostrar más decimales
     const minDigits = price < 1 ? 4 : 2;
     const maxDigits = price < 1 ? 4 : 2;
-    
-    // Formatear solo el número (sin símbolo de moneda)
+
     const numberFormatted = new Intl.NumberFormat(locale, {
       minimumFractionDigits: minDigits,
       maximumFractionDigits: maxDigits
     }).format(price);
-    
-    // Agregar el símbolo y código de moneda según el país
-    // Para diferenciar monedas que usan el mismo símbolo $, agregar el código de moneda
-    if (currency === 'COP') {
-      return `$ ${currency} ${numberFormatted}`;
-    } else if (currency === 'USD') {
-      return `$ ${currency} ${numberFormatted}`;
-    } else if (currency === 'MXN') {
-      return `$ ${currency} ${numberFormatted}`;
-    } else if (currency === 'PEN') {
-      // PEN usa S/ que ya es diferente
-      return `S/ ${numberFormatted}`;
-    }
-    
-    // Fallback
-    return `${currency} ${numberFormatted}`;
+
+    // Unir el número con el código de moneda (por ejemplo, "1,234.00 COP")
+    return `${numberFormatted} ${currency}`;
   }
 
-  formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('es-CO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
-  }
 }
