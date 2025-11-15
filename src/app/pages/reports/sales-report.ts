@@ -8,6 +8,7 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NgxChartsModule } from '@swimlane/ngx-charts';
 import { curveLinear } from 'd3-shape';
 import { SalesReportService, SalesReportRequest } from '../../services/sales-report.service';
+import { ACTIVE_TRANSLATIONS } from '../../shared/lang/lang-store';
 
 @Component({
   selector: 'app-sales-report',
@@ -424,6 +425,22 @@ export class SalesReport implements OnInit {
   // Función trackBy para evitar duplicados en el template
   trackByProduct(index: number, producto: any): string {
     return `${producto.nombre}-${producto.ventas}`;
+  }
+
+  // Método para obtener la traducción del período
+  getTranslatedPeriod(periodType: string): string {
+    if (!periodType) return periodType;
+    const periodMap: Record<string, string> = {
+      'bimestral': 'salesReportPeriodBimestral',
+      'trimestral': 'salesReportPeriodTrimestral',
+      'semestral': 'salesReportPeriodSemestral',
+      'anual': 'salesReportPeriodAnual'
+    };
+    const translationKey = periodMap[periodType];
+    if (translationKey) {
+      return ACTIVE_TRANSLATIONS[translationKey] || periodType;
+    }
+    return periodType;
   }
 
   // Métodos auxiliares para generar fechas

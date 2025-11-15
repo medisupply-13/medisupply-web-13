@@ -35,7 +35,7 @@
 
   <div *ngIf="reportData()" class="report-result">
     <div class="period-info">
-      <h3>{{ 'salesReportPeriod' | translate }}: {{ reportData().period_type }}</h3>
+      <h3>{{ 'salesReportPeriod' | translate }}: {{ getTranslatedPeriod(reportData().period_type) }}</h3>
       <p class="period-dates">{{ reportData().periodo }}</p>
     </div>
     
