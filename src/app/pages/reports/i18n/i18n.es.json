@@ -15,6 +15,7 @@
   
   "salesReportVendorLabel": "Vendedor",
   "salesReportPeriodLabel": "Período",
+  "salesReportPeriod": "Período",
   "salesReportButton": "Generar un reporte",
   "salesReportNoData": "¡Ups! No se encontraron datos para este período",
   "salesReportError": "¡Ups! Hubo un error al generar el reporte. Intenta nuevamente",
