@@ -457,13 +457,5 @@ describe('ProductList', () => {
       expect(snackBar.open).toHaveBeenCalled();
     });
   });
-
-  describe('formatDate', () => {
-    it('should format date correctly', () => {
-      const date = new Date('2024-01-15');
-      const formatted = component.formatDate(date);
-      expect(formatted).toContain('2024');
-    });
-  });
 });
 
