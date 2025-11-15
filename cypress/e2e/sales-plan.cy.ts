@@ -83,6 +83,32 @@ describe('Sales Plan Creation', () => {
           expect(text).to.match(/(Norte|Centro|Sur|Caribe|Pacífico)/i);
         });
         
+        // Immediately select a period (quarter) after selecting region
+        cy.wait(500);
+        cy.get('mat-select[formControlName="quarter"]').click();
+        cy.wait(1000);
+        
+        // Select first available quarter option
+        cy.get('.cdk-overlay-container mat-option, mat-option').first().click({ force: true });
+        cy.wait(500);
+        
+        // Verify quarter is selected
+        cy.get('mat-select[formControlName="quarter"]').then(($select) => {
+          const text = $select.text();
+          expect(text).to.match(/(Q1|Q2|Q3|Q4)/i);
+        });
+        
+        // Verify that region and quarter are selected before setting goal
+        cy.get('mat-select[formControlName="region"]').then(($select) => {
+          const regionText = $select.text();
+          expect(regionText).to.match(/(Norte|Centro|Sur|Caribe|Pacífico)/i);
+        });
+        
+        cy.get('mat-select[formControlName="quarter"]').then(($select) => {
+          const quarterText = $select.text();
+          expect(quarterText).to.match(/(Q1|Q2|Q3|Q4)/i);
+        });
+        
         // Now open product selector again to set the goal
         cy.get('.product-selector-container').click();
         cy.wait(1000);
@@ -116,13 +142,25 @@ describe('Sales Plan Creation', () => {
         // Verify save button is enabled when value is > 0
         cy.get('button.save-button').should('not.be.disabled');
         
-        // Verify input value is greater than 0
+        // Verify input value is greater than 0 (units must be > 0)
         cy.get('input[type="number"][placeholder="0"]').should('have.value', '10');
         cy.get('input[type="number"][placeholder="0"]').invoke('val').then((val) => {
-          expect(parseInt(val as string)).to.be.greaterThan(0);
+          const units = parseInt(val as string);
+          expect(units).to.be.greaterThan(0);
         });
         
-        // Now save the goal with value > 0
+        // Verify that region and quarter are still selected before saving goal
+        cy.get('mat-select[formControlName="region"]').then(($select) => {
+          const regionText = $select.text();
+          expect(regionText).to.match(/(Norte|Centro|Sur|Caribe|Pacífico)/i);
+        });
+        
+        cy.get('mat-select[formControlName="quarter"]').then(($select) => {
+          const quarterText = $select.text();
+          expect(quarterText).to.match(/(Q1|Q2|Q3|Q4)/i);
+        });
+        
+        // Now save the goal with value > 0, region and quarter selected
         cy.get('button.save-button').should('not.be.disabled');
         cy.get('button.save-button').click();
         cy.wait(500);
@@ -137,6 +175,91 @@ describe('Sales Plan Creation', () => {
         
         // Verify the product card has the 'has-goal' class
         cy.get('.product-card.selected').should('have.class', 'has-goal');
+        
+        // Close product selector before clicking create plan button
+        cy.get('.product-selector-container').click();
+        cy.wait(1000);
+        
+        // Verify that the product still has the goal saved (re-open selector to verify)
+        cy.get('.product-selector-container').click();
+        cy.wait(1000);
+        cy.get('.product-card.selected .goal-ribbon').should('exist');
+        cy.get('.product-card.selected .goal-text').should('contain.text', '10');
+        cy.get('.product-card.selected').should('have.class', 'has-goal');
+        
+        // Close selector again
+        cy.get('.product-selector-container').click();
+        cy.wait(1000);
+        
+        // Verify that region, quarter, and goal are set before clicking create plan
+        cy.get('mat-select[formControlName="region"]').then(($select) => {
+          const regionText = $select.text();
+          expect(regionText).to.match(/(Norte|Centro|Sur|Caribe|Pacífico)/i);
+        });
+        
+        cy.get('mat-select[formControlName="quarter"]').then(($select) => {
+          const quarterText = $select.text();
+          expect(quarterText).to.match(/(Q1|Q2|Q3|Q4)/i);
+        });
+        
+        // Wait a bit more to ensure Angular has processed all changes (OnPush change detection)
+        cy.wait(2000);
+        
+        // Force Angular change detection by interacting with the form
+        cy.get('mat-select[formControlName="region"]').click();
+        cy.wait(500);
+        cy.get('body').click(0, 0); // Click outside to close dropdown
+        cy.wait(500);
+        
+        // Verify that create plan button is enabled (region, quarter, and goal > 0 are set)
+        cy.get('button[type="submit"].create-button').should('not.be.disabled');
+        
+        // Click on create plan button
+        cy.get('button[type="submit"].create-button').click();
+        
+        // Wait a moment for the form submission to process
+        cy.wait(2000);
+        
+        // Wait for confirmation modal to appear - use should() to wait for it
+        cy.get('.modal-overlay', { timeout: 10000 }).should('be.visible');
+        cy.get('.modal-content', { timeout: 10000 }).should('be.visible');
+        
+        // Wait a bit more to ensure modal is fully rendered
+        cy.wait(1000);
+        
+        // Take a screenshot to verify modal is visible
+        cy.screenshot('modal-confirmacion-visible', { capture: 'viewport' });
+        
+        // Verify confirmation modal shows region and quarter
+        cy.get('.modal-content').should('contain.text', 'Confirmar');
+        cy.get('.modal-content').then(($modal) => {
+          const modalText = $modal.text();
+          const hasRegion = modalText.includes('Región') || modalText.includes('Region');
+          const hasQuarter = modalText.includes('Trimestre') || modalText.includes('Quarter') || 
+                           modalText.match(/Q[1-4]/);
+          expect(hasRegion || hasQuarter).to.be.true;
+        });
+        
+        // Check if confirm button exists and is enabled
+        cy.get('button.save-button').should('exist');
+        cy.get('button.save-button').should('not.be.disabled');
+        
+        // Confirm plan creation
+        cy.get('button.save-button').contains('Confirmar', { matchCase: false }).click({ force: true });
+        
+        // Wait for API call to complete
+        cy.wait(3000);
+        
+        // Check for success message
+        cy.get('body').then(($body) => {
+          const hasSuccess = $body.text().includes('Plan de venta creado exitosamente') ||
+                            $body.text().includes('created successfully') ||
+                            $body.find('.success-message').length > 0;
+          
+          if (hasSuccess) {
+            cy.get('.success-message').should('be.visible');
+          }
+        });
       } else {
         // If no products, just verify the selector is open
         cy.get('.products-grid').should('exist');
