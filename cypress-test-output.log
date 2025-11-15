@@ -1,0 +1,109 @@
+
+> medisupply@2.0.0 e2e:headless
+> cypress run --headless --spec cypress/e2e/login.cy.ts
+
+
+DevTools listening on ws://127.0.0.1:61340/devtools/browser/17fa38c5-6f8e-4d81-a51d-e7306d5ab5a4
+2025-11-13 19:52:24.665 Cypress[74699:11745836] +[IMKClient subclass]: chose IMKClient_Modern
+2025-11-13 19:52:24.665 Cypress[74699:11745836] +[IMKInputSession subclass]: chose IMKInputSession_Modern
+
+================================================================================
+
+  (Run Starting)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Cypress:        15.6.0                                                                         │
+  │ Browser:        Electron 138 (headless)                                                        │
+  │ Node Version:   v20.19.5 (/Users/javierfajardo/.nvm/versions/node/v20.19.5/bin/node)           │
+  │ Specs:          1 found (login.cy.ts)                                                          │
+  │ Searched:       cypress/e2e/login.cy.ts                                                        │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  login.cy.ts                                                                     (1 of 1)
+
+
+  Login Page
+    ✓ should display the login form (2104ms)
+    1) should show validation errors for empty fields
+    2) should show error for invalid email format
+    3) should show error for invalid credentials
+    4) should successfully login with valid credentials
+    ✓ should toggle password visibility (1789ms)
+    ✓ should disable submit button when form is invalid (2672ms)
+
+
+  3 passing (49s)
+  4 failing
+
+  1) Login Page
+       should show validation errors for empty fields:
+     CypressError: Timed out retrying after 10050ms: `cy.click()` failed because this element is `disabled`:
+
+`<button _ngcontent-ng-c676859657="" type="submit" class="login-button" disabled="">...</button>`
+
+Fix this problem, or use `{force: true}` to disable error checking.
+
+https://on.cypress.io/element-cannot-be-interacted-with
+      at Object.isNotDisabled (http://localhost:4200/__cypress/runner/cypress_runner.js:152495:58)
+      at runAllChecks (http://localhost:4200/__cypress/runner/cypress_runner.js:115053:26)
+      at retryActionability (http://localhost:4200/__cypress/runner/cypress_runner.js:115142:16)
+      at tryCatcher (http://localhost:4200/__cypress/runner/cypress_runner.js:1777:23)
+      at Promise.attempt.Promise.try (http://localhost:4200/__cypress/runner/cypress_runner.js:4285:29)
+      at whenStable (http://localhost:4200/__cypress/runner/cypress_runner.js:151356:68)
+      at <unknown> (http://localhost:4200/__cypress/runner/cypress_runner.js:151297:14)
+      at tryCatcher (http://localhost:4200/__cypress/runner/cypress_runner.js:1777:23)
+      at Promise._settlePromiseFromHandler (http://localhost:4200/__cypress/runner/cypress_runner.js:1489:31)
+      at Promise._settlePromise (http://localhost:4200/__cypress/runner/cypress_runner.js:1546:18)
+      at Promise._settlePromise0 (http://localhost:4200/__cypress/runner/cypress_runner.js:1591:10)
+      at Promise._settlePromises (http://localhost:4200/__cypress/runner/cypress_runner.js:1671:18)
+      at Promise._fulfill (http://localhost:4200/__cypress/runner/cypress_runner.js:1615:18)
+      at <unknown> (http://localhost:4200/__cypress/runner/cypress_runner.js:5420:46)
+
+  2) Login Page
+       should show error for invalid email format:
+     CypressError: Timed out retrying after 10050ms: `cy.click()` failed because this element is `disabled`:
+
+`<button _ngcontent-ng-c676859657="" type="submit" class="login-button" disabled="">...</button>`
+
+Fix this problem, or use `{force: true}` to disable error checking.
+
+https://on.cypress.io/element-cannot-be-interacted-with
+      at Object.isNotDisabled (http://localhost:4200/__cypress/runner/cypress_runner.js:152495:58)
+      at runAllChecks (http://localhost:4200/__cypress/runner/cypress_runner.js:115053:26)
+      at retryActionability (http://localhost:4200/__cypress/runner/cypress_runner.js:115142:16)
+      at tryCatcher (http://localhost:4200/__cypress/runner/cypress_runner.js:1777:23)
+      at Promise.attempt.Promise.try (http://localhost:4200/__cypress/runner/cypress_runner.js:4285:29)
+      at whenStable (http://localhost:4200/__cypress/runner/cypress_runner.js:151356:68)
+      at <unknown> (http://localhost:4200/__cypress/runner/cypress_runner.js:151297:14)
+      at tryCatcher (http://localhost:4200/__cypress/runner/cypress_runner.js:1777:23)
+      at Promise._settlePromiseFromHandler (http://localhost:4200/__cypress/runner/cypress_runner.js:1489:31)
+      at Promise._settlePromise (http://localhost:4200/__cypress/runner/cypress_runner.js:1546:18)
+      at Promise._settlePromise0 (http://localhost:4200/__cypress/runner/cypress_runner.js:1591:10)
+      at Promise._settlePromises (http://localhost:4200/__cypress/runner/cypress_runner.js:1671:18)
+      at Promise._fulfill (http://localhost:4200/__cypress/runner/cypress_runner.js:1615:18)
+      at <unknown> (http://localhost:4200/__cypress/runner/cypress_runner.js:5420:46)
+
+  3) Login Page
+       should show error for invalid credentials:
+     TypeError: cy.get(...).should(...).or is not a function
+      at Context.eval (webpack://medisupply/./cypress/e2e/login.cy.ts:44:51)
+      at runnable.fn (http://localhost:4200/__cypress/runner/cypress_runner.js:145954:19)
+      at callFn (http://localhost:4200/__cypress/runner/cypress_runner.js:165048:21)
+      at Runnable.run (http://localhost:4200/__cypress/runner/cypress_runner.js:165035:7)
+      at <unknown> (http://localhost:4200/__cypress/runner/cypress_runner.js:171130:30)
+      at PassThroughHandlerContext.finallyHandler (http://localhost:4200/__cypress/runner/cypress_runner.js:4042:23)
+      at PassThroughHandlerContext.tryCatcher (http://localhost:4200/__cypress/runner/cypress_runner.js:1777:23)
+      at Promise._settlePromiseFromHandler (http://localhost:4200/__cypress/runner/cypress_runner.js:1489:31)
+      at Promise._settlePromise (http://localhost:4200/__cypress/runner/cypress_runner.js:1546:18)
+
+  4) Login Page
+       should successfully login with valid credentials:
+     AssertionError: Timed out retrying after 10000ms: expected 'http://localhost:4200/login' to not include '/login'
+      at Context.eval (webpack://medisupply/./cypress/e2e/login.cy.ts:62:13)
+
+
+
+
