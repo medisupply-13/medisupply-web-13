@@ -1,8 +1,8 @@
 export const environment = {
   production: false,
-  baseUrl: 'http://localhost:8083/',
-  offerUrl: 'http://localhost:8083/',
-  version: '2.0.0'
+  baseUrl: 'https://r1kyo276f3.execute-api.us-east-1.amazonaws.com/prod/',
+  offerUrl: 'https://r1kyo276f3.execute-api.us-east-1.amazonaws.com/prod/',
+  version: '3.0.0'
 };
 
 

@@ -651,7 +651,17 @@ export class ProductList implements OnInit, AfterViewInit {
     };
     
     const rate = rates[country] || 1;
-    return Math.round(value * rate);
+    const converted = value * rate;
+    
+    // Para valores muy pequeños, usar más precisión (4 decimales)
+    // Para valores normales, usar 2 decimales
+    if (converted < 1) {
+      // Valores menores a 1: usar 4 decimales para mayor precisión
+      return Math.round(converted * 10000) / 10000;
+    } else {
+      // Valores mayores o iguales a 1: usar 2 decimales
+      return Math.round(converted * 100) / 100;
+    }
   }
 
   // Computed signal para obtener el símbolo de moneda según el país
@@ -675,7 +685,7 @@ export class ProductList implements OnInit, AfterViewInit {
     // Usar el formato de moneda con el símbolo correcto según el país
     const country = localStorage.getItem('userCountry') || 'CO';
     const currency = this.currencySymbol();
-    
+
     // Formatear según el país
     const localeMap: Record<string, string> = {
       'CO': 'es-CO',
@@ -683,22 +693,20 @@ export class ProductList implements OnInit, AfterViewInit {
       'EC': 'es-EC',
       'MX': 'es-MX'
     };
-    
+
     const locale = localeMap[country] || 'es-CO';
-    
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+
+    // Para valores muy pequeños, mostrar más decimales
+    const minDigits = price < 1 ? 4 : 2;
+    const maxDigits = price < 1 ? 4 : 2;
+
+    const numberFormatted = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: minDigits,
+      maximumFractionDigits: maxDigits
     }).format(price);
+
+    // Unir el número con el código de moneda (por ejemplo, "1,234.00 COP")
+    return `${numberFormatted} ${currency}`;
   }
 
-  formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('es-CO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
-  }
 }

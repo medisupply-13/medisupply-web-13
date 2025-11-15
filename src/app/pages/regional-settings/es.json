@@ -307,5 +307,24 @@
   "uploadProvidersAria": "Subir proveedores al sistema",
   "uploadValidationError": "¡Ups! El archivo tiene errores de validación, revisa y sube nuevamente",
   "uploadDuplicatedUsers": "¡Ups! Existen usuarios duplicados, revisa el archivo",
-  "templateDownloaded": "Plantilla descargada exitosamente"
+  "templateDownloaded": "Plantilla descargada exitosamente",
+
+  "addProductDialogTitle": "Agregar Producto",
+  "addProductSkuLabel": "SKU *",
+  "addProductSkuPlaceholder": "Ingrese el SKU del producto",
+  "addProductSkuRequired": "El SKU es requerido",
+  "addProductNameLabel": "Nombre *",
+  "addProductNamePlaceholder": "Ingrese el nombre del producto",
+  "addProductNameRequired": "El nombre es requerido",
+  "addProductPriceLabel": "Precio *",
+  "addProductPriceRequired": "El precio debe ser mayor a 0",
+  "addProductStockLabel": "Stock Total *",
+  "addProductStockRequired": "El stock total debe ser mayor o igual a 0",
+  "addProductCategoryLabel": "Categoría *",
+  "addProductCategoryPlaceholder": "Seleccione una categoría",
+  "addProductCategoryRequired": "La categoría es requerida",
+  "addProductImageUrlLabel": "URL de Imagen",
+  "addProductImageUrlPlaceholder": "https://ejemplo.com/imagen.jpg",
+  "addProductCancelButton": "Cancelar",
+  "addProductCreateButton": "Crear Producto"
 }
