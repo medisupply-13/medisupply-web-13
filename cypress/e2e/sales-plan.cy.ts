@@ -43,7 +43,8 @@ describe('Sales Plan Creation', () => {
     // Wait for products to load
     cy.wait(3000);
     
-    // Open product selector
+    // First, interact with product-selector-section to enable region selection
+    cy.get('.product-selector-section').should('be.visible');
     cy.get('.product-selector-container').click();
     cy.wait(1000);
     
@@ -62,6 +63,29 @@ describe('Sales Plan Creation', () => {
         
         // Verify product is selected (should have 'selected' class)
         cy.get('.product-card.selected').should('exist');
+        
+        // Close product selector before selecting region
+        cy.get('.product-selector-container').click();
+        cy.wait(500);
+        
+        // Now select a region after interacting with product-selector-section
+        cy.wait(1000);
+        cy.get('mat-select[formControlName="region"]').click();
+        cy.wait(1000);
+        
+        // Select first available region option
+        cy.get('.cdk-overlay-container mat-option, mat-option').first().click({ force: true });
+        cy.wait(500);
+        
+        // Verify region is selected
+        cy.get('mat-select[formControlName="region"]').then(($select) => {
+          const text = $select.text();
+          expect(text).to.match(/(Norte|Centro|Sur|Caribe|Pacífico)/i);
+        });
+        
+        // Now open product selector again to set the goal
+        cy.get('.product-selector-container').click();
+        cy.wait(1000);
         
         // Click on the meta button for the selected product
         cy.get('.product-card.selected .meta-button').first().should('not.be.disabled');
