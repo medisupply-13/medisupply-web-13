@@ -122,7 +122,19 @@ export class UserValidationService {
       console.log('URL:', `${this.api}users/upload/validate`);
       console.log('Usuarios a validar:', users.length);
       
-      const jsonPayload = JSON.stringify(users);
+      // Transformar los datos para que coincidan con lo que espera el backend
+      // El backend espera: phone, identification (en inglés)
+      const transformedUsers = users.map(user => ({
+        nombre: user.nombre,
+        apellido: user.apellido,
+        correo: user.correo,
+        identification: user.identificacion, // Mapear identificacion -> identification
+        phone: user.telefono, // Mapear telefono -> phone
+        rol: user.rol,
+        contraseña: user.contraseña
+      }));
+      
+      const jsonPayload = JSON.stringify(transformedUsers);
       console.log('Payload JSON:', jsonPayload.substring(0, 500) + '...');
       
       const response = await fetch(`${this.api}users/upload/validate`, {
@@ -163,7 +175,21 @@ export class UserValidationService {
       }
 
       // Usar los usuarios validados del backend si están disponibles
-      const validatedUsers = result.validated_users || result.data || (errors.length === 0 ? users : undefined);
+      // El backend puede devolver los datos con nombres en inglés, transformarlos de vuelta
+      let validatedUsers = result.validated_users || result.data || (errors.length === 0 ? transformedUsers : undefined);
+      
+      // Si el backend devuelve datos con nombres en inglés, transformarlos de vuelta a español
+      if (validatedUsers && Array.isArray(validatedUsers)) {
+        validatedUsers = validatedUsers.map((user: any) => ({
+          nombre: user.nombre,
+          apellido: user.apellido,
+          correo: user.correo,
+          identificacion: user.identification || user.identificacion, // Aceptar ambos formatos
+          telefono: user.phone || user.telefono, // Aceptar ambos formatos
+          rol: user.rol,
+          contraseña: user.contraseña
+        }));
+      }
 
       return {
         isValid: errors.length === 0 && validatedUsers !== undefined,
@@ -190,11 +216,26 @@ export class UserValidationService {
     console.log('Usuarios a insertar:', users.length);
     console.log('Nombre de archivo:', fileName);
     
-    if (users.length > 0) {
-      console.log('Primer usuario:', JSON.stringify(users[0], null, 2));
+    // Transformar los datos para que coincidan con lo que espera el backend
+    // El backend espera: phone, identification (en inglés)
+    // El código usa: telefono, identificacion (en español)
+    const transformedUsers = users.map(user => ({
+      nombre: user.nombre,
+      apellido: user.apellido,
+      correo: user.correo,
+      identification: user.identificacion, // Mapear identificacion -> identification
+      phone: user.telefono, // Mapear telefono -> phone
+      rol: user.rol,
+      contraseña: user.contraseña
+    }));
+    
+    if (transformedUsers.length > 0) {
+      console.log('Primer usuario (antes de transformar):', JSON.stringify(users[0], null, 2));
+      console.log('Primer usuario (transformado para backend):', JSON.stringify(transformedUsers[0], null, 2));
     }
 
-    const jsonPayload = JSON.stringify(users);
+    const jsonPayload = JSON.stringify(transformedUsers);
+    console.log('Payload JSON completo:', jsonPayload.substring(0, 500) + '...');
     
     const response = await fetch(url, {
       method: 'POST',
@@ -227,13 +268,11 @@ export class UserValidationService {
    * NOTA: Las contraseñas en el ejemplo están encriptadas (hash bcrypt de ejemplo)
    */
   generateTemplateCSV(): string {
-    const headers = this.requiredFields.join(',');
-    // Contraseñas encriptadas de ejemplo (hash bcrypt de "Password123!")
-    // En producción, el usuario debe proporcionar contraseñas ya encriptadas
-    const encryptedPassword1 = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'; // Password123!
-    const encryptedPassword2 = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'; // SecurePass456@
-    const example1 = `Juan,Pérez,juan.perez@example.com,1234567890,3001234567,SELLER,${encryptedPassword1}`;
-    const example2 = `María,González,maria.gonzalez@example.com,0987654321,3007654321,CLIENT,${encryptedPassword2}`;
+    // Usar nombres de columnas según el ejemplo proporcionado
+    const headers = 'nombre,apellido,correo,identification,phone,rol,contraseña';
+    // Ejemplos basados en el formato proporcionado
+    const example1 = `Pedro6,Pascal,pedro7.pascal@example.com,46827838338,325117845637,SELLER,Provider123!`;
+    const example2 = `Mariela6,Gamezz,mariela7.gamez@example.com,978074747437,378167385447,CLIENT,Provider123!`;
     return `${headers}\n${example1}\n${example2}`;
   }
 
@@ -295,7 +334,7 @@ export class UserValidationService {
       'nombre': ['nombre', 'name', 'first_name', 'firstname'],
       'apellido': ['apellido', 'last_name', 'lastname', 'surname'],
       'correo': ['correo', 'email', 'e_mail', 'mail'],
-      'identificacion': ['identificacion', 'id', 'documento', 'document', 'cedula', 'dni'],
+      'identificacion': ['identificacion', 'identification', 'id', 'documento', 'document', 'cedula', 'dni'],
       'telefono': ['telefono', 'phone', 'telephone', 'celular', 'mobile'],
       'rol': ['rol', 'role', 'tipo', 'type', 'perfil'],
       'contraseña': ['contraseña', 'contrasea', 'contrasena', 'password', 'pass', 'passwd']
@@ -429,7 +468,7 @@ export class UserValidationService {
       'nombre': ['nombre', 'name', 'first_name'],
       'apellido': ['apellido', 'last_name'],
       'correo': ['correo', 'email'],
-      'identificacion': ['identificacion', 'id', 'documento'],
+      'identificacion': ['identificacion', 'identification', 'id', 'documento'],
       'telefono': ['telefono', 'phone'],
       'rol': ['rol', 'role'],
       'contraseña': ['contraseña', 'contrasea', 'contrasena', 'password']
@@ -512,7 +551,7 @@ export class UserValidationService {
       'nombre': { variations: ['nombre', 'name', 'first_name'] },
       'apellido': { variations: ['apellido', 'last_name'] },
       'correo': { variations: ['correo', 'email'] },
-      'identificacion': { variations: ['identificacion', 'id', 'documento'] },
+      'identificacion': { variations: ['identificacion', 'identification', 'id', 'documento'] },
       'telefono': { variations: ['telefono', 'phone'] },
       'rol': { variations: ['rol', 'role'] },
       'contraseña': { variations: ['contraseña', 'contrasea', 'contrasena', 'password'] }
