@@ -78,18 +78,31 @@ export class SalesPlan {
   defaultImage = 'assets/images/products/por-defecto.png';
 
   // Función para convertir valores según el país
+  // El backend devuelve valores en pesos colombianos (COP)
   private convertValue(value: number): number {
     const country = localStorage.getItem('userCountry') || 'CO';
-    // Para Colombia, el backend ya devuelve valores en pesos, no necesitamos convertir
-    const rates: Record<string, number> = { 'CO': 1, 'PE': 3.7, 'EC': 1, 'MX': 17.5 };
+    
+    // Tasas de conversión actualizadas (el backend devuelve valores en COP)
+    const rates: Record<string, number> = { 
+      'CO': 1,           // Colombia - Sin conversión (ya está en pesos)
+      'PE': 0.0014,      // Perú - COP a PEN (1 COP ≈ 0.0014 PEN)
+      'EC': 0.00026,     // Ecuador - COP a USD (1 COP ≈ 0.00026 USD)
+      'MX': 0.0047       // México - COP a MXN (1 COP ≈ 0.0047 MXN)
+    };
+    
     return Math.round(value * (rates[country] || 1));
   }
 
   // Computed signal para obtener el símbolo de moneda según el país
   currencySymbol = computed(() => {
     const country = localStorage.getItem('userCountry') || 'CO';
-    const symbols: Record<string, string> = { 'CO': '$', 'PE': 'S/', 'EC': '$', 'MX': '$' };
-    return symbols[country] || '$';
+    const symbols: Record<string, string> = { 
+      'CO': 'COP', 
+      'PE': 'PEN', 
+      'EC': 'USD', 
+      'MX': 'MXN' 
+    };
+    return symbols[country] || 'COP';
   });
 
   // Estados del selector de productos

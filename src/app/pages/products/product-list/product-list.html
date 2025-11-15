@@ -2,16 +2,16 @@
 
 <div class="product-list-container">
   <!-- Mensajes de estado -->
-  <app-status-message 
-    *ngIf="showSuccessMessage()" 
-    type="success" 
+  <app-status-message
+    *ngIf="showSuccessMessage()"
+    type="success"
     messageKey="uploadSuccessMessage"
     [float]="true">
   </app-status-message>
 
-  <app-status-message 
-    *ngIf="showErrorMessage()" 
-    type="error" 
+  <app-status-message
+    *ngIf="showErrorMessage()"
+    type="error"
     messageKey="errorMessage()"
     [float]="true">
   </app-status-message>
@@ -22,14 +22,25 @@
       <h2>{{ 'productListTitle' | translate }}</h2>
       <p>{{ 'productListSubtitle' | translate }}</p>
     </div>
-    <button 
-      mat-flat-button 
-      color="primary"
-      (click)="toggleUploadSection()"
-      [attr.aria-label]="'uploadProductsAria' | translate">
-      <mat-icon>upload</mat-icon>
-      {{ 'uploadProductsButton' | translate }}
-    </button>
+    <div class="header-actions">
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="addProduct()"
+        [attr.aria-label]="'addProductAria' | translate"
+        style="margin-right: 12px;">
+        <mat-icon>add</mat-icon>
+        {{ 'addProductButton' | translate }}
+      </button>
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="toggleUploadSection()"
+        [attr.aria-label]="'uploadProductsAria' | translate">
+        <mat-icon>upload</mat-icon>
+        {{ 'uploadProductsButton' | translate }}
+      </button>
+    </div>
   </div>
 
   <!-- Sección de carga de archivos (expandible) -->
@@ -43,9 +54,9 @@
       </mat-card-header>
       <mat-card-content>
         <p>{{ 'uploadTemplateDescription' | translate }}</p>
-        <button 
-          mat-flat-button 
-          color="primary" 
+        <button
+          mat-flat-button
+          color="primary"
           (click)="downloadTemplate()"
           [attr.aria-label]="'downloadTemplateAria' | translate">
           <mat-icon>file_download</mat-icon>
@@ -62,27 +73,27 @@
         </mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <div 
+        <div
           class="drop-zone"
           (dragover)="onDragOver($event)"
           (drop)="onDrop($event)"
           [class.drag-over]="false">
-          
+
           <div class="drop-zone-content">
             <mat-icon class="upload-icon">cloud_upload</mat-icon>
             <h3>{{ 'uploadDropZoneTitle' | translate }}</h3>
             <p>{{ 'uploadDropZoneDescription' | translate }}</p>
-            
-            <input 
-              type="file" 
+
+            <input
+              type="file"
               #fileInput
               multiple
               accept=".csv,.xlsx"
               (change)="onFileSelected($event)"
               style="display: none;">
-            
-            <button 
-              mat-flat-button 
+
+            <button
+              mat-flat-button
               color="primary"
               (click)="fileInput.click()"
               [attr.aria-label]="'selectFilesAria' | translate">
@@ -95,7 +106,7 @@
         <!-- Lista de archivos cargados -->
         <div class="files-list" *ngIf="uploadedFiles().length > 0">
           <h4>{{ 'uploadedFilesTitle' | translate }}</h4>
-          
+
           <div class="file-item" *ngFor="let file of uploadedFiles()">
             <div class="file-info">
               <mat-icon [class]="file.isValid ? 'valid' : 'invalid'">
@@ -104,30 +115,30 @@
               <div class="file-details">
                 <span class="file-name">{{ file.file.name }}</span>
                 <span class="file-size">{{ formatFileSize(file.file.size) }}</span>
-                
+
                 <!-- Mostrar errores de validación -->
                 <div class="file-errors" *ngIf="!file.isValid && file.errorMessage">
                   <span class="error-text">{{ file.errorMessage }}</span>
                 </div>
-                
+
                 <!-- Mostrar advertencias -->
                 <div class="file-warnings" *ngIf="file.validationResult?.warnings?.length">
                   <span class="warning-text" *ngFor="let warning of file.validationResult?.warnings">
                     ⚠️ {{ warning }}
                   </span>
                 </div>
-                
+
                 <div class="file-progress" *ngIf="file.progress < 100">
-                  <mat-progress-bar 
-                    mode="determinate" 
+                  <mat-progress-bar
+                    mode="determinate"
                     [value]="file.progress">
                   </mat-progress-bar>
                 </div>
               </div>
             </div>
-            
-            <button 
-              mat-icon-button 
+
+            <button
+              mat-icon-button
               color="warn"
               (click)="removeFile(file.id)"
               [attr.aria-label]="'removeFileAria' | translate">
@@ -138,8 +149,8 @@
 
         <!-- Botón de subida -->
         <div class="upload-actions" *ngIf="uploadedFiles().length > 0">
-          <button 
-            mat-flat-button 
+          <button
+            mat-flat-button
             color="primary"
             [disabled]="!hasValidFiles || isUploading()"
             (click)="uploadProducts()"
@@ -148,7 +159,7 @@
             {{ 'uploadProductsButton' | translate }}
             <span *ngIf="validFilesCount > 0">({{ validFilesCount }})</span>
           </button>
-          
+
           <div class="upload-progress" *ngIf="isUploading()">
             <mat-progress-bar mode="indeterminate"></mat-progress-bar>
             <p>{{ 'uploadingMessage' | translate }}</p>
@@ -166,10 +177,10 @@
         <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         <p class="loading-text">{{ 'loadingProducts' | translate }}</p>
       </div>
-      
+
       <div class="table-container" *ngIf="!isLoading()">
         <table mat-table [dataSource]="dataSource" matSort class="products-table">
-          
+
           <!-- Columna SKU -->
           <ng-container matColumnDef="sku">
             <th mat-header-cell *matHeaderCellDef mat-sort-header="sku">{{ 'productSkuColumn' | translate }}</th>
@@ -195,7 +206,7 @@
             <th mat-header-cell *matHeaderCellDef mat-sort-header="value">{{ 'productPriceColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <div class="product-price">
-                {{ formatPrice(product.value) }}
+                {{ formatPrice(getConvertedPrice(product)) }}
               </div>
             </td>
           </ng-container>
@@ -227,14 +238,14 @@
             <th mat-header-cell *matHeaderCellDef>{{ 'productActionsColumn' | translate }}</th>
             <td mat-cell *matCellDef="let product">
               <div class="action-buttons">
-                <button 
+                <button
                   mat-icon-button
                   color="primary"
                   (click)="editProduct(product)"
                   [attr.aria-label]="'editProductAria' | translate">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button 
+                <button
                   mat-icon-button
                   color="warn"
                   (click)="deleteProduct(product)"
@@ -264,8 +275,8 @@
         <mat-icon>inventory_2</mat-icon>
         <h3>{{ 'noProductsTitle' | translate }}</h3>
         <p>{{ 'noProductsMessage' | translate }}</p>
-        <button 
-          mat-flat-button 
+        <button
+          mat-flat-button
           color="primary"
           (click)="toggleUploadSection()">
           <mat-icon>upload</mat-icon>

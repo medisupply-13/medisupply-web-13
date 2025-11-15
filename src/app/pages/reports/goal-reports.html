@@ -1,0 +1,107 @@
+<app-page-header [pageTitle]="pageTitle" [backRoute]="'/reportes'"></app-page-header>
+
+<div class="report-container">
+  <app-custom-select
+    [labelKey]="'salesReportVendorLabel'"
+    [options]="vendedores()"
+    [model]="vendedor"
+    [required]="true"
+    (modelChange)="onSelectionChange()"
+  ></app-custom-select>
+
+  <app-custom-select
+    [labelKey]="'salesPlanQuarterLabel'"
+    [options]="quarters"
+    [model]="quarter"
+    [required]="true"
+    (modelChange)="onSelectionChange()"
+    style="margin-top: 20px"
+  ></app-custom-select>
+
+  <app-custom-select
+    [labelKey]="'region_label'"
+    [options]="regionOptions"
+    [model]="region"
+    [required]="true"
+    (modelChange)="onSelectionChange()"
+    style="margin-top: 20px"
+  ></app-custom-select>
+
+  <div class="button-container">
+    <button mat-flat-button color="primary" [disabled]="isButtonDisabled" (click)="generarReporte()">
+      {{ 'goalReportButton' | translate }}
+    </button>
+  </div>
+
+  <app-status-message
+    *ngIf="showMessage()"
+    [type]="messageType()"
+    [messageKey]="messageText()"
+    [float]="true"
+    [duration]="messageType() === 'error' ? 8000 : 4000"
+  ></app-status-message>
+
+  <div *ngIf="reportData()" class="compliance-report">
+    <div class="report-header">
+      <h2>Reporte de Cumplimiento</h2>
+      <div class="compliance-percentage">
+        <span class="percentage-value">{{ reportData().cumplimiento_total_pct | number:'1.2-2' }}%</span>
+        <span class="percentage-label">Cumplimiento del vendedor</span>
+      </div>
+    </div>
+
+    <div class="metrics-container">
+      <!-- Métrica Producto -->
+      <div class="metric-item">
+        <div class="metric-header">
+          <span class="metric-label">Producto</span>
+          <span class="metric-value">
+            {{ formatNumber(getAggregatedMetrics().producto.achieved) }} / {{ formatNumber(getAggregatedMetrics().producto.goal) }}
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div
+            class="progress-bar"
+            [class]="'progress-bar ' + getStatusColor(getProductStatus())"
+            [style.width.%]="getProgressPercentage(getAggregatedMetrics().producto.achieved, getAggregatedMetrics().producto.goal)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Métrica Región -->
+      <div class="metric-item">
+        <div class="metric-header">
+          <span class="metric-label">Región</span>
+          <span class="metric-value">
+            {{ formatNumber(getAggregatedMetrics().region.achieved) }} / {{ formatNumber(getAggregatedMetrics().region.goal) }}
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div
+            class="progress-bar"
+            [class]="'progress-bar ' + getStatusColor(getRegionStatus())"
+            [style.width.%]="getProgressPercentage(getAggregatedMetrics().region.achieved, getAggregatedMetrics().region.goal)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Métrica Total -->
+      <div class="metric-item">
+        <div class="metric-header">
+          <span class="metric-label">Total</span>
+          <span class="metric-value">
+            {{ formatNumber(getAggregatedMetrics().total.achieved) }} / {{ formatNumber(getAggregatedMetrics().total.goal) }}
+          </span>
+        </div>
+        <div class="progress-bar-container">
+          <div
+            class="progress-bar"
+            [class]="'progress-bar ' + getStatusColor(getTotalStatus())"
+            [style.width.%]="getProgressPercentage(getAggregatedMetrics().total.achieved, getAggregatedMetrics().total.goal)">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

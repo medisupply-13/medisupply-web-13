@@ -87,21 +87,20 @@ describe('PageHeader', () => {
   describe('Inputs', () => {
     it('should have default values', () => {
       expect(component.pageTitle).toBe('');
-      expect(component.userName).toBe('John Doe');
-      expect(component.userRole).toBe('Administrador');
+      expect(component.userName()).toBeDefined();
+      expect(component.userRole()).toBeDefined();
       expect(component.backRoute).toBeNull();
     });
 
     it('should accept custom inputs', () => {
       component.pageTitle = 'Test Page';
-      component.userName = 'Test User';
-      component.userRole = 'Manager';
       component.backRoute = '/test';
       
       expect(component.pageTitle).toBe('Test Page');
-      expect(component.userName).toBe('Test User');
-      expect(component.userRole).toBe('Manager');
       expect(component.backRoute).toBe('/test');
+      // userName y userRole son computed signals que dependen del usuario autenticado
+      expect(component.userName()).toBeDefined();
+      expect(component.userRole()).toBeDefined();
     });
   });
 });

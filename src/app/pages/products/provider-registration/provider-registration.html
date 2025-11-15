@@ -1,0 +1,142 @@
+<app-page-header [pageTitle]="pageTitle" [backRoute]="backRoute"></app-page-header>
+
+<div class="provider-registration-container">
+  <!-- Mensajes de estado -->
+  <app-status-message 
+    *ngIf="showSuccessMessage()" 
+    type="success" 
+    messageKey="uploadSuccessMessage"
+    [float]="true">
+  </app-status-message>
+
+  <app-status-message 
+    *ngIf="showErrorMessage()" 
+    type="error" 
+    messageKey="errorMessage()"
+    [float]="true">
+  </app-status-message>
+
+  <!-- Sección de carga de archivos -->
+  <div class="upload-section" *ngIf="showUploadSection()">
+    <mat-card class="template-section">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>download</mat-icon>
+          {{ 'uploadTemplateTitle' | translate }}
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p>{{ 'uploadTemplateDescription' | translate }}</p>
+        <button 
+          mat-flat-button 
+          color="primary" 
+          (click)="downloadTemplate()"
+          [attr.aria-label]="'downloadTemplateAria' | translate">
+          <mat-icon>file_download</mat-icon>
+          {{ 'downloadTemplateButton' | translate }}
+        </button>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="upload-files-section">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>cloud_upload</mat-icon>
+          {{ 'uploadFilesTitle' | translate }}
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div 
+          class="drop-zone"
+          (dragover)="onDragOver($event)"
+          (drop)="onDrop($event)"
+          [class.drag-over]="false">
+          
+          <div class="drop-zone-content">
+            <mat-icon class="upload-icon">cloud_upload</mat-icon>
+            <h3>{{ 'uploadDropZoneTitle' | translate }}</h3>
+            <p>{{ 'uploadDropZoneDescription' | translate }}</p>
+            
+            <input 
+              type="file" 
+              #fileInput
+              multiple
+              accept=".csv,.xlsx"
+              (change)="onFileSelected($event)"
+              style="display: none;">
+            
+            <button 
+              mat-flat-button 
+              color="primary"
+              (click)="fileInput.click()"
+              [attr.aria-label]="'selectFilesAria' | translate">
+              <mat-icon>folder_open</mat-icon>
+              {{ 'selectFilesButton' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de archivos cargados -->
+        <div class="files-list" *ngIf="uploadedFiles().length > 0">
+          <h4>{{ 'uploadedFilesTitle' | translate }}</h4>
+          
+          <div class="file-item" *ngFor="let file of uploadedFiles()">
+            <div class="file-info">
+              <mat-icon [class]="file.isValid ? 'success-icon' : 'error-icon'">
+                {{ file.isValid ? 'check_circle' : 'error' }}
+              </mat-icon>
+              <div class="file-details">
+                <span class="file-name">{{ file.file.name }}</span>
+                <span class="file-size">{{ formatFileSize(file.file.size) }}</span>
+              </div>
+            </div>
+            
+            <div class="file-status">
+              <div class="file-progress" *ngIf="file.progress < 100">
+                <mat-progress-bar 
+                  mode="determinate" 
+                  [value]="file.progress">
+                </mat-progress-bar>
+                <span class="progress-text">{{ file.progress }}%</span>
+              </div>
+              
+              <div class="file-error" *ngIf="!file.isValid && file.errorMessage">
+                <mat-icon>error_outline</mat-icon>
+                <span>{{ file.errorMessage }}</span>
+              </div>
+              
+              <button 
+                mat-icon-button
+                color="warn"
+                (click)="removeFile(file.id)"
+                [attr.aria-label]="'removeFileAria' | translate">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <!-- Botón de subida -->
+          <div class="upload-actions">
+            <button 
+              mat-flat-button 
+              color="primary"
+              [disabled]="!hasValidFiles || isUploading()"
+              (click)="uploadProviders()"
+              [attr.aria-label]="'uploadProvidersAria' | translate">
+              <mat-icon>upload</mat-icon>
+              {{ 'uploadProvidersButton' | translate }}
+              <span *ngIf="validFilesCount > 0"> ({{ validFilesCount }})</span>
+            </button>
+            
+            <mat-progress-bar 
+              *ngIf="isUploading()"
+              mode="indeterminate"
+              style="margin-top: 16px;">
+            </mat-progress-bar>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+

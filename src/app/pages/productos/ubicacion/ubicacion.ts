@@ -250,10 +250,39 @@ export class UbicacionComponent implements OnInit {
     const p = product as any;
     
     console.log('🔍 Ubicacion: Extrayendo ubicaciones del producto:', product.product_id, 'SKU:', product.sku);
+    console.log('🔍 Ubicacion: Estructura completa del producto recibido:', {
+      product_id: product.product_id,
+      sku: product.sku,
+      hasLocationsField: 'locations' in product,
+      locationsType: typeof backendLocations,
+      locationsIsArray: Array.isArray(backendLocations),
+      locationsLength: Array.isArray(backendLocations) ? backendLocations.length : 'N/A',
+      allProductKeys: Object.keys(product)
+    });
     
     if (!backendLocations || !Array.isArray(backendLocations) || backendLocations.length === 0) {
       console.log('⚠️ Ubicacion: No hay ubicaciones en el backend para este producto');
+      console.log('⚠️ Ubicacion: Detalle - backendLocations existe:', !!backendLocations, ', es array:', Array.isArray(backendLocations), ', longitud:', Array.isArray(backendLocations) ? backendLocations.length : 'N/A');
       return [];
+    }
+    
+    // LOG CRÍTICO: Ver el contenido REAL del array locations
+    console.log('🔍 Ubicacion: Array locations COMPLETO (JSON):', JSON.stringify(backendLocations, null, 2));
+    if (backendLocations.length > 0) {
+      console.log('🔍 Ubicacion: Primera ubicación del array:', JSON.stringify(backendLocations[0], null, 2));
+      console.log('🔍 Ubicacion: Keys de la primera ubicación:', Object.keys(backendLocations[0]));
+      console.log('🔍 Ubicacion: Valores de la primera ubicación:', {
+        section: backendLocations[0].section,
+        aisle: backendLocations[0].aisle,
+        shelf: backendLocations[0].shelf,
+        level: backendLocations[0].level,
+        lote: backendLocations[0].lote,
+        lot: backendLocations[0].lot,
+        quantity: backendLocations[0].quantity,
+        available: backendLocations[0].available,
+        expiry_date: backendLocations[0].expiry_date,
+        expires: backendLocations[0].expires
+      });
     }
     
     // El backend con include_locations=true devuelve un array de ubicaciones,
@@ -261,39 +290,58 @@ export class UbicacionComponent implements OnInit {
     const locations: ProductLocation[] = [];
     
     for (const location of backendLocations) {
-      const lotNumber = location.lote || '';
+      // El servicio LocationService ya normaliza los campos, usar los nombres normalizados
+      // Pero también verificar nombres alternativos por si acaso
+      const lotNumber = location.lot || location.lote || '';
       
-      if (!lotNumber) {
-        console.warn('⚠️ Ubicacion: Ubicación sin lote, omitiendo:', location);
+      // NO omitir ubicaciones sin lote - algunas ubicaciones pueden no tener lote asignado
+      // Solo omitir si la ubicación está completamente vacía
+      const hasLocationData = location.section || location.aisle || location.shelf || location.level || lotNumber;
+      if (!hasLocationData) {
+        console.warn('⚠️ Ubicacion: Ubicación completamente vacía, omitiendo:', location);
         continue;
       }
       
-      // Formatear la fecha de vencimiento (formato GMT del backend)
+      // Formatear la fecha de vencimiento - usar el campo normalizado 'expires'
       let expiryDate = '';
-      if (location.expiry_date) {
+      const expirySource = location.expires || location.expiry_date || location.expiration_date;
+      if (expirySource) {
         try {
-          const date = new Date(location.expiry_date);
+          const date = new Date(expirySource);
           if (!isNaN(date.getTime())) {
             expiryDate = date.toISOString().split('T')[0];
           } else {
-            expiryDate = location.expiry_date;
+            expiryDate = expirySource;
           }
         } catch (e) {
-          expiryDate = location.expiry_date || '';
+          expiryDate = expirySource || '';
         }
       }
       
-      // Cada ubicación del array representa un lote con su ubicación física
-      locations.push({
-        section: location.section || '',
-        aisle: location.aisle || '',
-        shelf: location.shelf || '',
-        level: location.level || '',
+      // CRÍTICO: Preservar los valores tal cual vienen, incluso si son null o strings vacíos
+      // El problema puede ser que los valores están como null y se convierten a ''
+      const extractedLocation: ProductLocation = {
+        section: location.section !== null && location.section !== undefined ? String(location.section) : '',
+        aisle: location.aisle !== null && location.aisle !== undefined ? String(location.aisle) : '',
+        shelf: location.shelf !== null && location.shelf !== undefined ? String(location.shelf) : '',
+        level: location.level !== null && location.level !== undefined ? String(location.level) : '',
         lot: lotNumber,
         expires: expiryDate,
-        available: location.quantity || 0,
-        reserved: location.reserved_quantity || 0
+        // El servicio ya normaliza a 'available' y 'reserved'
+        available: location.available !== undefined ? location.available : (location.quantity || 0),
+        reserved: location.reserved !== undefined ? location.reserved : (location.reserved_quantity || 0)
+      };
+      
+      // LOG para verificar qué valores se están extrayendo
+      console.log('🔍 Ubicacion: Ubicación extraída:', {
+        section: `"${extractedLocation.section}" (original: ${location.section}, tipo: ${typeof location.section})`,
+        aisle: `"${extractedLocation.aisle}" (original: ${location.aisle}, tipo: ${typeof location.aisle})`,
+        shelf: `"${extractedLocation.shelf}" (original: ${location.shelf}, tipo: ${typeof location.shelf})`,
+        level: `"${extractedLocation.level}" (original: ${location.level}, tipo: ${typeof location.level})`,
+        lot: extractedLocation.lot
       });
+      
+      locations.push(extractedLocation);
     }
     
     console.log('✅ Ubicacion: Total de ubicaciones extraídas:', locations.length);

@@ -30,19 +30,19 @@
     <div class="user-details" [attr.aria-label]="'userDetailsLabel' | translate">
       <div class="user-name" [attr.aria-label]="'userNameLabel' | translate">
         <p class="body1">{{ 'userGreeting' | translate }}</p>
-        <p class="body2">{{ userName }}</p>
+        <p class="body2">{{ userName() }}</p>
       </div>
 
       <div class="user-role" [attr.aria-label]="'userRoleLabel' | translate">
-        <p>{{ userRole }}</p>
+        <p>{{ userRole() }}</p>
       </div>
     </div>
   </div>
 </mat-toolbar>
 
 <div class="custom-menu" *ngIf="menuVisible" [attr.aria-label]="'userMenuLabel' | translate">
-  <h6 class="body1">{{ userName }}</h6>
-  <p class="body2">{{ userRole }}</p>
+  <h6 class="body1">{{ userName() }}</h6>
+  <p class="body2">{{ userRole() }}</p>
   <mat-divider></mat-divider>
   <a
     mat-list-item

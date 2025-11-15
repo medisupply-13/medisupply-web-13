@@ -17,6 +17,10 @@ export interface ProductTemplate {
   category_name: string;
   quantity: number;
   warehouse_id: number;
+  section?: string;
+  aisle?: string;
+  shelf?: string;
+  level?: string;
 }
 
 @Injectable({
@@ -178,7 +182,11 @@ export class FileValidationService {
       'value': ['value', 'precio', 'price', 'costo', 'cost', 'valor'],
       'category_name': ['category_name', 'categoria', 'category', 'categ', 'tipo', 'type'],
       'quantity': ['quantity', 'stock_minimo', 'stock_min', 'minimo', 'minimum', 'min_stock', 'stock'],
-      'warehouse_id': ['warehouse_id', 'warehouse', 'bodega', 'bodega_id', 'almacen', 'almacen_id']
+      'warehouse_id': ['warehouse_id', 'warehouse', 'bodega', 'bodega_id', 'almacen', 'almacen_id'],
+      'section': ['section', 'seccion', 'sección', 'sec'],
+      'aisle': ['aisle', 'pasillo', 'pas'],
+      'shelf': ['shelf', 'mueble', 'estante', 'rack'],
+      'level': ['level', 'nivel', 'niv', 'level_id']
     };
 
     // Verificar campos obligatorios con variaciones
@@ -289,7 +297,7 @@ export class FileValidationService {
       headerMap[header] = index;
     });
 
-    return {
+    const product: ProductTemplate = {
       sku: rowData[headerMap['sku']]?.trim() || '',
       name: rowData[headerMap['name']]?.trim() || '',
       value: parseFloat(rowData[headerMap['value']]?.trim() || '0'),
@@ -297,6 +305,48 @@ export class FileValidationService {
       quantity: parseInt(rowData[headerMap['quantity']]?.trim() || '0'),
       warehouse_id: parseInt(rowData[headerMap['warehouse_id']]?.trim() || '1')
     };
+
+    // Agregar campos de ubicación opcionales si están presentes en el CSV
+    // Buscar por nombre exacto y variaciones en los headers normalizados
+    const locationFields = [
+      { key: 'section', variations: ['section', 'seccion', 'sección', 'sec'] },
+      { key: 'aisle', variations: ['aisle', 'pasillo', 'pas'] },
+      { key: 'shelf', variations: ['shelf', 'mueble', 'estante', 'rack'] },
+      { key: 'level', variations: ['level', 'nivel', 'niv', 'level_id'] }
+    ];
+
+    for (const field of locationFields) {
+      let found = false;
+      // Buscar el header en el mapa normalizado
+      for (const variation of field.variations) {
+        if (headerMap[variation] !== undefined) {
+          const value = rowData[headerMap[variation]]?.trim();
+          // Incluir siempre el campo, incluso si está vacío (para mantener consistencia con el CSV)
+          (product as any)[field.key] = value || '';
+          found = true;
+          console.log(`📦 Mapeado campo ${field.key} desde header "${variation}": "${value}"`);
+          break;
+        }
+      }
+      // Si no se encontró en los headers normalizados, intentar buscar en los headers originales
+      if (!found) {
+        for (let i = 0; i < headers.length; i++) {
+          const originalHeader = headers[i].toLowerCase().trim();
+          for (const variation of field.variations) {
+            if (originalHeader === variation || originalHeader.includes(variation)) {
+              const value = rowData[i]?.trim();
+              (product as any)[field.key] = value || '';
+              found = true;
+              console.log(`📦 Mapeado campo ${field.key} desde header original "${headers[i]}": "${value}"`);
+              break;
+            }
+          }
+          if (found) break;
+        }
+      }
+    }
+
+    return product;
   }
 
   private findDuplicateHeaders(headers: string[]): string[] {
@@ -422,7 +472,7 @@ export class FileValidationService {
       // ENVIAR COMO ARRAY JSON (más simple)
       console.log('=== ENVIANDO COMO ARRAY JSON ===');
       
-      // Convertir el archivo CSV a array de objetos
+      // Convertir el archivo CSV a array de objetos usando mapRowToProduct para mantener consistencia
       const fileContent = await this.readFileAsText(file);
       const lines = fileContent.split('\n').filter(line => line.trim());
       const headers = this.parseCSVLine(lines[0]);
@@ -430,16 +480,25 @@ export class FileValidationService {
       
       for (let i = 1; i < lines.length; i++) {
         const values = this.parseCSVLine(lines[i]);
-        const product: any = {};
-        headers.forEach((header, index) => {
-          product[header.trim()] = values[index]?.trim() || '';
-        });
+        // Usar mapRowToProduct para mapear correctamente todos los campos, incluyendo ubicación
+        const product = this.mapRowToProduct(values, headers);
         products.push(product);
       }
       
       console.log('=== PRODUCTOS A ENVIAR ===');
       console.log('Cantidad de productos:', products.length);
-      console.log('Primeros 3 productos:', products.slice(0, 3));
+      console.log('Primeros 3 productos:', JSON.stringify(products.slice(0, 3), null, 2));
+      console.log('📦 Verificando campos de ubicación en productos:');
+      if (products.length > 0) {
+        const firstProduct = products[0];
+        console.log('📦 Primer producto completo:', JSON.stringify(firstProduct, null, 2));
+        console.log('📦 Campos de ubicación:', {
+          section: firstProduct.section,
+          aisle: firstProduct.aisle,
+          shelf: firstProduct.shelf,
+          level: firstProduct.level
+        });
+      }
       
       // Log del JSON que se enviará
       const jsonPayload = JSON.stringify(products);
@@ -520,11 +579,22 @@ export class FileValidationService {
         warnings.push(...result.warnings);
       }
 
+      // IMPORTANTE: Usar los productos validados del backend si están disponibles
+      // Esto asegura que los campos de ubicación se incluyan correctamente
+      const validatedProducts = result.validated_products && result.validated_products.length > 0 
+        ? result.validated_products 
+        : (errors.length === 0 ? products : undefined);
+      
+      console.log('📦 FileValidationService: Productos validados del backend:', validatedProducts?.length || 0);
+      if (validatedProducts && validatedProducts.length > 0) {
+        console.log('📦 FileValidationService: Primer producto validado:', JSON.stringify(validatedProducts[0], null, 2));
+      }
+
       return {
-        isValid: errors.length === 0,
+        isValid: errors.length === 0 && validatedProducts !== undefined,
         errors,
         warnings,
-        data: errors.length === 0 ? data : undefined
+        data: validatedProducts
       };
 
     } catch (error) {
@@ -541,19 +611,38 @@ export class FileValidationService {
    */
   async insertValidatedProducts(products: any[]): Promise<any> {
     const url = `${environment.baseUrl}products/upload3/insert`;
-    const jsonPayload = JSON.stringify(products);
+    
     console.log('=== INSERT PRODUCTS (POST) ===');
     console.log('URL:', url);
     console.log('Método: POST');
     console.log('Content-Type: application/json');
-    console.log('Productos:', products.length);
-    console.log('Payload JSON:', jsonPayload);
+    console.log('Productos a insertar:', products.length);
+    
+    // Verificar campos de ubicación en los productos
+    console.log('📦 Verificando campos de ubicación antes de insertar:');
+    if (products.length > 0) {
+      const firstProduct = products[0];
+      console.log('📦 Primer producto completo:', JSON.stringify(firstProduct, null, 2));
+      console.log('📦 Campos de ubicación en primer producto:', {
+        section: firstProduct.section,
+        aisle: firstProduct.aisle,
+        shelf: firstProduct.shelf,
+        level: firstProduct.level
+      });
+      console.log('📦 ¿Tiene section?', 'section' in firstProduct, 'Valor:', firstProduct.section);
+      console.log('📦 ¿Tiene aisle?', 'aisle' in firstProduct, 'Valor:', firstProduct.aisle);
+      console.log('📦 ¿Tiene shelf?', 'shelf' in firstProduct, 'Valor:', firstProduct.shelf);
+      console.log('📦 ¿Tiene level?', 'level' in firstProduct, 'Valor:', firstProduct.level);
+    }
+    
+    const jsonPayload = JSON.stringify(products);
+    console.log('Payload JSON completo:', jsonPayload);
     console.log('Tamaño del payload:', jsonPayload.length, 'caracteres');
     console.log('CURL EXACTO:');
     console.log(`curl -X POST -H "Content-Type: application/json" -d '${jsonPayload}' ${url}`);
     console.log('=== ENVIANDO REQUEST ===');
     console.log('Headers:', { 'Content-Type': 'application/json' });
-    console.log('Body:', jsonPayload);
+    console.log('Body (primeros 1000 chars):', jsonPayload.substring(0, 1000));
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

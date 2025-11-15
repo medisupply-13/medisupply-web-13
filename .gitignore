@@ -43,6 +43,12 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
+# Cypress
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+*.mp4
+
 # Python
 __pycache__/
 *.py[cod]

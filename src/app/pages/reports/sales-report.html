@@ -3,9 +3,10 @@
 <div class="report-container">
   <app-custom-select
     [labelKey]="'salesReportVendorLabel'"
-    [options]="vendedores"
+    [options]="vendedores()"
     [model]="vendedor"
     [required]="true"
+    [maxOptionsHeight]="320"
     (modelChange)="onSelectionChange()"
   ></app-custom-select>
 
@@ -33,6 +34,11 @@
   ></app-status-message>
 
   <div *ngIf="reportData()" class="report-result">
+    <div class="period-info">
+      <h3>{{ 'salesReportPeriod' | translate }}: {{ reportData().period_type }}</h3>
+      <p class="period-dates">{{ reportData().periodo }}</p>
+    </div>
+    
     <div class="summary">
       <div class="box">
         <h3>{{ 'salesReportTotalSales' | translate }}</h3>
@@ -61,9 +67,10 @@
 
     <div class="chart">
       <h3>{{ 'salesReportTrend' | translate }}</h3>
+      <p class="chart-subtitle">{{ getChartSubtitle() }}</p>
     
       <ngx-charts-line-chart
-        [view]="[600, 300]"
+        [view]="getChartView()"
         [scheme]="'cool'"
         [results]="getChartData()"
         [xAxis]="true"
@@ -71,9 +78,13 @@
         [legend]="false"
         [showXAxisLabel]="true"
         [showYAxisLabel]="true"
-        [xAxisLabel]="'salesReportChartXAxisLabel' | translate"
+        [xAxisLabel]="getXAxisLabel()"
         [yAxisLabel]="'salesReportChartYAxisLabel' | translate"
-        [animations]="false">
+        [animations]="false"
+        [curve]="curveLinear"
+        [showGridLines]="true"
+        [roundDomains]="true"
+        [autoScale]="true">
       </ngx-charts-line-chart>
     </div>
     

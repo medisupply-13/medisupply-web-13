@@ -6,6 +6,12 @@
   "viewGoalReports": "View goal reports",
   "viewGoalReportsSubtitle": "See goal and sales performance reports",
   "viewGoalReportsAria": "Button to view goal reports",
+  "goalReportButton": "Generate report",
+  "salesPlanQuarterLabel": "Quarter",
+  "goalReportPlanLabel": "Plan",
+  "goalReportSuccess": "Goal compliance report generated successfully",
+  "goalReportError": "Oops! There was an error generating the report. Please try again.",
+  "goalReportNoData": "Oops! No compliance data found for this period",
   
   "salesReportVendorLabel": "Vendor",
   "salesReportPeriodLabel": "Period",

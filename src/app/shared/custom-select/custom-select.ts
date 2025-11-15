@@ -22,6 +22,7 @@ export class CustomSelect {
   @Input() name = '';
   @Input() required!: boolean;
   @Input() placeholderKey = 'selectPlaceholder';
+  @Input() maxOptionsHeight = 200;
   @Input() selectId = 'custom-select-' + Math.random().toString(36).substring(2, 8);
   @Output() modelChange = new EventEmitter<string>();
 
