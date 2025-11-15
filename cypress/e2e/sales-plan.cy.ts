@@ -39,6 +39,87 @@ describe('Sales Plan Creation', () => {
     });
   });
 
+  it('should select a product and set a goal quantity', () => {
+    // Wait for products to load
+    cy.wait(3000);
+    
+    // Open product selector
+    cy.get('.product-selector-container').click();
+    cy.wait(1000);
+    
+    // Check if product selector is open and products are displayed
+    cy.get('.products-grid').should('be.visible');
+    
+    // Wait a bit for products to render
+    cy.wait(1000);
+    
+    // Check if there are products available
+    cy.get('body').then(($body) => {
+      if ($body.find('.product-card').length > 0) {
+        // Select first product by clicking on the card
+        cy.get('.product-card').first().click();
+        cy.wait(500);
+        
+        // Verify product is selected (should have 'selected' class)
+        cy.get('.product-card.selected').should('exist');
+        
+        // Click on the meta button for the selected product
+        cy.get('.product-card.selected .meta-button').first().should('not.be.disabled');
+        cy.get('.product-card.selected .meta-button').first().click();
+        cy.wait(500);
+        
+        // Wait for goal modal to appear
+        cy.get('.modal-overlay').should('be.visible');
+        cy.get('.modal-content').should('be.visible');
+        
+        // Verify input has min="1" attribute (must be greater than 0)
+        cy.get('input[type="number"][placeholder="0"]').should('have.attr', 'min', '1');
+        
+        // Test with 0 - button should be disabled
+        cy.get('input[type="number"][placeholder="0"]').clear().type('0');
+        cy.wait(300);
+        cy.get('button.save-button').should('be.disabled');
+        
+        // Test with negative value - button should be disabled
+        cy.get('input[type="number"][placeholder="0"]').clear().type('-5');
+        cy.wait(300);
+        cy.get('button.save-button').should('be.disabled');
+        
+        // Test with valid value greater than 0 - button should be enabled
+        cy.get('input[type="number"][placeholder="0"]').clear().type('10');
+        cy.wait(300);
+        
+        // Verify save button is enabled when value is > 0
+        cy.get('button.save-button').should('not.be.disabled');
+        
+        // Verify input value is greater than 0
+        cy.get('input[type="number"][placeholder="0"]').should('have.value', '10');
+        cy.get('input[type="number"][placeholder="0"]').invoke('val').then((val) => {
+          expect(parseInt(val as string)).to.be.greaterThan(0);
+        });
+        
+        // Now save the goal with value > 0
+        cy.get('button.save-button').should('not.be.disabled');
+        cy.get('button.save-button').click();
+        cy.wait(500);
+        
+        // Verify modal is closed after saving
+        cy.get('.modal-overlay').should('not.exist');
+        
+        // Verify the product card shows the goal ribbon with the saved quantity
+        cy.get('.product-card.selected .goal-ribbon').should('exist');
+        cy.get('.product-card.selected .goal-text').should('contain.text', '10');
+        cy.get('.product-card.selected .goal-text').should('contain.text', 'unidades');
+        
+        // Verify the product card has the 'has-goal' class
+        cy.get('.product-card.selected').should('have.class', 'has-goal');
+      } else {
+        // If no products, just verify the selector is open
+        cy.get('.products-grid').should('exist');
+      }
+    });
+  });
+
   it('should navigate back from sales plan page', () => {
     // Check if back button exists in page header
     cy.get('app-page-header').should('be.visible');
