@@ -12,6 +12,11 @@
   "goalReportSuccess": "Reporte de cumplimiento generado correctamente",
   "goalReportError": "¡Ups! Hubo un error al generar el reporte. Intenta nuevamente",
   "goalReportNoData": "¡Ups! No se encontraron datos de cumplimiento para este período",
+  "goalReportTitle": "Reporte de Cumplimiento",
+  "goalReportVendorCompliance": "Cumplimiento del vendedor",
+  "goalReportProduct": "Producto",
+  "goalReportRegion": "Región",
+  "goalReportTotal": "Total",
   
   "salesReportVendorLabel": "Vendedor",
   "salesReportPeriodLabel": "Período",

@@ -282,6 +282,14 @@
           {{ 'plan_creation_error' | translate }}
         </div>
       </div>
+
+      <!-- Mensaje de error de stock -->
+      <div class="stock-error-message" *ngIf="getErrorMessage('stock')">
+        <mat-icon>error</mat-icon>
+        <div class="error-text">
+          <pre>{{ getErrorMessage('stock') }}</pre>
+        </div>
+      </div>
     </form>
   </div>
 </div>
@@ -310,24 +318,41 @@
           [ngModelOptions]="{standalone: true}"
           placeholder="0"
           min="1"
+          [disabled]="validatingStock()"
           required>
         <mat-error *ngIf="!goalValue || +goalValue <= 0">
           {{ 'goal_validation_error' | translate }}
         </mat-error>
       </mat-form-field>
+
+      <!-- Mensaje de error de stock -->
+      <div class="product-stock-error" *ngIf="productStockError()">
+        <mat-icon>error</mat-icon>
+        <div class="error-text">
+          <pre>{{ productStockError() }}</pre>
+        </div>
+      </div>
+
+      <!-- Indicador de validación -->
+      <div class="validating-message" *ngIf="validatingStock()">
+        <mat-icon>hourglass_empty</mat-icon>
+        <span>Validando stock disponible...</span>
+      </div>
     </div>
     
     <div class="modal-footer">
-      <button mat-button (click)="closeGoalModal()" class="cancel-button">
+      <button mat-button (click)="closeGoalModal()" class="cancel-button" [disabled]="validatingStock()">
         {{ 'cancel_button' | translate }}
       </button>
       <button 
         mat-raised-button 
         color="primary" 
-        (click)="saveGoal()"
-        [disabled]="!goalValue || +goalValue <= 0"
+        type="button"
+        (click)="saveGoal($event)"
+        [disabled]="!goalValue || +goalValue <= 0 || validatingStock()"
         class="save-button">
-        {{ 'save_goal_button' | translate }}
+        <span *ngIf="!validatingStock()">{{ 'save_goal_button' | translate }}</span>
+        <span *ngIf="validatingStock()">Validando...</span>
       </button>
     </div>
   </div>

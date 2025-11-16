@@ -43,10 +43,10 @@
 
   <div *ngIf="reportData()" class="compliance-report">
     <div class="report-header">
-      <h2>Reporte de Cumplimiento</h2>
+      <h2>{{ 'goalReportTitle' | translate }}</h2>
       <div class="compliance-percentage">
         <span class="percentage-value">{{ reportData().cumplimiento_total_pct | number:'1.2-2' }}%</span>
-        <span class="percentage-label">Cumplimiento del vendedor</span>
+        <span class="percentage-label">{{ 'goalReportVendorCompliance' | translate }}</span>
       </div>
     </div>
 
@@ -54,7 +54,7 @@
       <!-- Métrica Producto -->
       <div class="metric-item">
         <div class="metric-header">
-          <span class="metric-label">Producto</span>
+          <span class="metric-label">{{ 'goalReportProduct' | translate }}</span>
           <span class="metric-value">
             {{ formatNumber(getAggregatedMetrics().producto.achieved) }} / {{ formatNumber(getAggregatedMetrics().producto.goal) }}
           </span>
@@ -71,7 +71,7 @@
       <!-- Métrica Región -->
       <div class="metric-item">
         <div class="metric-header">
-          <span class="metric-label">Región</span>
+          <span class="metric-label">{{ 'goalReportRegion' | translate }}</span>
           <span class="metric-value">
             {{ formatNumber(getAggregatedMetrics().region.achieved) }} / {{ formatNumber(getAggregatedMetrics().region.goal) }}
           </span>
@@ -88,7 +88,7 @@
       <!-- Métrica Total -->
       <div class="metric-item">
         <div class="metric-header">
-          <span class="metric-label">Total</span>
+          <span class="metric-label">{{ 'goalReportTotal' | translate }}</span>
           <span class="metric-value">
             {{ formatNumber(getAggregatedMetrics().total.achieved) }} / {{ formatNumber(getAggregatedMetrics().total.goal) }}
           </span>

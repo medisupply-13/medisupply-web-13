@@ -12,6 +12,11 @@
   "goalReportSuccess": "Goal compliance report generated successfully",
   "goalReportError": "Oops! There was an error generating the report. Please try again.",
   "goalReportNoData": "Oops! No compliance data found for this period",
+  "goalReportTitle": "Compliance Report",
+  "goalReportVendorCompliance": "Vendor compliance",
+  "goalReportProduct": "Product",
+  "goalReportRegion": "Region",
+  "goalReportTotal": "Total",
   
   "salesReportVendorLabel": "Vendor",
   "salesReportPeriodLabel": "Period",
