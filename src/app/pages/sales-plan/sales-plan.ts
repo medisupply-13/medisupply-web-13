@@ -714,10 +714,18 @@ export class SalesPlan {
         quarter: this.salesPlanForm.get('quarter')?.value, // 'Q1'..'Q4'
         year: new Date().getFullYear(),
         total_goal: finalTotalGoal, // valor monetario de la meta total (manual o calculado)
-        products: productsWithGoals.map(p => ({
-          product_id: Number(p.id) || 0,
-          individual_goal: p.goal || 0
-        }))
+        products: productsWithGoals.map(p => {
+          // Convertir la meta de unidades a valor monetario para que la comparación
+          // en el reporte de cumplimiento sea correcta (valor monetario vs valor monetario)
+          const units = p.goal || 0;
+          const unitPrice = this.convertValue(p.price);
+          const goalValue = units * unitPrice;
+          
+          return {
+            product_id: Number(p.id) || 0,
+            individual_goal: goalValue // valor monetario (unidades × precio)
+          };
+        })
       };
       
       console.log('Plan de venta a enviar:', salesPlanData);

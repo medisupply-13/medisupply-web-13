@@ -14,8 +14,8 @@ export interface CreateSalesPlanPayload {
   region: string;        // 'Norte', 'Centro', ...
   quarter: string;       // 'Q1'..'Q4'
   year: number;          // año actual
-  total_goal: number;    // suma de metas (unidades)
-  products: { product_id: number; individual_goal: number; }[];
+  total_goal: number;    // valor monetario de la meta total
+  products: { product_id: number; individual_goal: number; }[]; // individual_goal en valor monetario (unidades × precio)
 }
 
 export interface CreateSalesPlanResponse {
