@@ -223,54 +223,25 @@ export class GoalReports implements OnInit {
     return new Intl.NumberFormat('es-CO').format(value);
   }
 
-  // Obtener el porcentaje de cumplimiento total corregido
-  // Según el JSON del backend, viene como ratio (ej: 3.045 = 304.5%)
-  // Si el valor es >= 100, ya es un porcentaje, si no, es un ratio que hay que multiplicar por 100
+  // Obtener el porcentaje de cumplimiento total
+  // El backend devuelve el porcentaje directamente (ej: 11.04 = 11.04%)
   getCumplimientoTotalPct(): number {
     const data = this.reportData();
     if (!data || data.cumplimiento_total_pct === undefined || data.cumplimiento_total_pct === null) {
       return 0;
     }
-    const pct = data.cumplimiento_total_pct;
-    
-    // Si el valor es 0, retornar 0
-    if (pct === 0) {
-      return 0;
-    }
-    
-    // Si el valor es >= 100, probablemente ya es un porcentaje
-    // Si el valor está entre 0 y 100, es un ratio -> multiplicar por 100
-    if (pct >= 100) {
-      return pct;
-    }
-    
-    // Para valores entre 0 y 100, multiplicar por 100 para convertir ratio a porcentaje
-    return pct * 100;
+    // El backend ya devuelve el porcentaje directamente, no necesita conversión
+    return data.cumplimiento_total_pct;
   }
 
   // Obtener el porcentaje de cumplimiento de un producto
-  // Según el JSON del backend, los valores vienen como ratios (ej: 25.0 = 2500%)
-  // Si el valor es >= 100, ya es un porcentaje, si no, es un ratio que hay que multiplicar por 100
+  // El backend devuelve el porcentaje directamente (ej: 7.35 = 7.35%, 0.0 = 0%)
   getProductCumplimientoPct(product: any): number {
     if (!product || product.cumplimiento_pct === undefined || product.cumplimiento_pct === null) {
       return 0;
     }
-    const pct = product.cumplimiento_pct;
-    
-    // Si el valor es 0, retornar 0
-    if (pct === 0) {
-      return 0;
-    }
-    
-    // Si el valor es >= 100, probablemente ya es un porcentaje (ej: 2500%)
-    // Si el valor está entre 1 y 100, es un ratio (ej: 25.0) -> multiplicar por 100
-    // Si el valor es menor a 1, es un decimal (ej: 0.25) -> multiplicar por 100
-    if (pct >= 100) {
-      return pct;
-    }
-    
-    // Para valores entre 0 y 100, multiplicar por 100 para convertir ratio a porcentaje
-    return pct * 100;
+    // El backend ya devuelve el porcentaje directamente, no necesita conversión
+    return product.cumplimiento_pct;
   }
 
   // Obtener los productos del detalle
@@ -286,11 +257,15 @@ export class GoalReports implements OnInit {
   formatDate(dateString: string): string {
     if (!dateString) return '';
     try {
-      const date = new Date(dateString);
+      // Parsear la fecha como UTC para evitar problemas de zona horaria
+      // El formato del backend es "YYYY-MM-DD"
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
       return new Intl.DateTimeFormat('es-CO', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
+        timeZone: 'UTC'
       }).format(date);
     } catch {
       return dateString;
