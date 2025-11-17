@@ -180,6 +180,12 @@ export class GoalReports implements OnInit {
     return 'red';
   }
 
+  getStatusLabel(status: string): string {
+    if (status === 'verde') return 'Cumplido';
+    if (status === 'amarillo') return 'En progreso';
+    return 'Sin cumplir';
+  }
+
   // Obtener el status para Producto (basado en detalle_productos)
   getProductStatus(): string {
     const data = this.reportData();
@@ -217,6 +223,80 @@ export class GoalReports implements OnInit {
     return new Intl.NumberFormat('es-CO').format(value);
   }
 
+  // Obtener el porcentaje de cumplimiento total corregido
+  // Según el JSON del backend, viene como ratio (ej: 3.045 = 304.5%)
+  // Si el valor es >= 100, ya es un porcentaje, si no, es un ratio que hay que multiplicar por 100
+  getCumplimientoTotalPct(): number {
+    const data = this.reportData();
+    if (!data || data.cumplimiento_total_pct === undefined || data.cumplimiento_total_pct === null) {
+      return 0;
+    }
+    const pct = data.cumplimiento_total_pct;
+    
+    // Si el valor es 0, retornar 0
+    if (pct === 0) {
+      return 0;
+    }
+    
+    // Si el valor es >= 100, probablemente ya es un porcentaje
+    // Si el valor está entre 0 y 100, es un ratio -> multiplicar por 100
+    if (pct >= 100) {
+      return pct;
+    }
+    
+    // Para valores entre 0 y 100, multiplicar por 100 para convertir ratio a porcentaje
+    return pct * 100;
+  }
+
+  // Obtener el porcentaje de cumplimiento de un producto
+  // Según el JSON del backend, los valores vienen como ratios (ej: 25.0 = 2500%)
+  // Si el valor es >= 100, ya es un porcentaje, si no, es un ratio que hay que multiplicar por 100
+  getProductCumplimientoPct(product: any): number {
+    if (!product || product.cumplimiento_pct === undefined || product.cumplimiento_pct === null) {
+      return 0;
+    }
+    const pct = product.cumplimiento_pct;
+    
+    // Si el valor es 0, retornar 0
+    if (pct === 0) {
+      return 0;
+    }
+    
+    // Si el valor es >= 100, probablemente ya es un porcentaje (ej: 2500%)
+    // Si el valor está entre 1 y 100, es un ratio (ej: 25.0) -> multiplicar por 100
+    // Si el valor es menor a 1, es un decimal (ej: 0.25) -> multiplicar por 100
+    if (pct >= 100) {
+      return pct;
+    }
+    
+    // Para valores entre 0 y 100, multiplicar por 100 para convertir ratio a porcentaje
+    return pct * 100;
+  }
+
+  // Obtener los productos del detalle
+  getDetalleProductos(): any[] {
+    const data = this.reportData();
+    if (!data || !data.detalle_productos || !Array.isArray(data.detalle_productos)) {
+      return [];
+    }
+    return data.detalle_productos;
+  }
+
+  // Formatear fecha
+  formatDate(dateString: string): string {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('es-CO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }).format(date);
+    } catch {
+      return dateString;
+    }
+  }
+
   // Calcular métricas agregadas desde detalle_productos
   getAggregatedMetrics() {
     const data = this.reportData();
@@ -241,6 +321,50 @@ export class GoalReports implements OnInit {
       region: { achieved: regionAchieved, goal: regionGoal },
       total: { achieved: data.ventasTotales || 0, goal: data.total_goal || 0 }
     };
+  }
+
+  // Obtener resumen estadístico
+  getSummaryStats() {
+    const data = this.reportData();
+    if (!data || !data.detalle_productos) {
+      return {
+        totalProducts: 0,
+        productsWithGoal: 0,
+        productsWithoutGoal: 0,
+        productsCompleted: 0,
+        productsInProgress: 0,
+        productsNotCompleted: 0,
+        totalSales: 0,
+        totalGoal: 0,
+        difference: 0
+      };
+    }
+
+    const productos = data.detalle_productos;
+    const productsWithGoal = productos.filter((p: any) => p.goal && p.goal > 0);
+    const productsWithoutGoal = productos.filter((p: any) => !p.goal || p.goal === 0);
+    const productsCompleted = productos.filter((p: any) => p.status === 'verde');
+    const productsInProgress = productos.filter((p: any) => p.status === 'amarillo');
+    const productsNotCompleted = productos.filter((p: any) => p.status === 'rojo');
+
+    return {
+      totalProducts: productos.length,
+      productsWithGoal: productsWithGoal.length,
+      productsWithoutGoal: productsWithoutGoal.length,
+      productsCompleted: productsCompleted.length,
+      productsInProgress: productsInProgress.length,
+      productsNotCompleted: productsNotCompleted.length,
+      totalSales: data.ventasTotales || 0,
+      totalGoal: data.total_goal || 0,
+      difference: (data.ventasTotales || 0) - (data.total_goal || 0)
+    };
+  }
+
+  // Ordenar productos (por defecto por product_id, pero se puede cambiar)
+  getDetalleProductosSorted(): any[] {
+    const productos = this.getDetalleProductos();
+    // Ordenar por product_id ascendente
+    return [...productos].sort((a, b) => (a.product_id || 0) - (b.product_id || 0));
   }
 }
 

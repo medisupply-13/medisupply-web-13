@@ -14,7 +14,7 @@
   border-radius: 12px;
   padding: 32px;
   margin-top: 40px;
-  max-width: 700px;
+  max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -106,5 +106,265 @@
 
 .progress-bar.green {
   background: #27ae60;
+}
+
+/* Información adicional del reporte */
+.report-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-weight: 600;
+  color: #1e1e1e;
+  font-size: 16px;
+}
+
+.info-value.highlight {
+  color: #27ae60;
+  font-size: 18px;
+}
+
+.info-value.positive {
+  color: #27ae60;
+}
+
+.info-value.negative {
+  color: #eb5757;
+}
+
+/* Sección de detalle de productos */
+.products-detail-section {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e1e1e;
+  margin: 0 0 24px 0;
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 14px;
+}
+
+.products-table thead {
+  background: #f8f9fa;
+}
+
+.products-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #1e1e1e;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.products-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.products-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.products-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Estilos para columnas específicas */
+.product-id {
+  font-weight: 600;
+  color: #1e1e1e;
+}
+
+.sales-value,
+.goal-value {
+  font-weight: 500;
+  color: #333;
+}
+
+.compliance-value {
+  font-weight: 600;
+}
+
+.compliance-value .no-goal {
+  color: #999;
+  font-style: italic;
+  font-weight: normal;
+}
+
+.status-cell {
+  text-align: center;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.status-verde {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.status-amarillo {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.status-rojo {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Colores de fila según status */
+.products-table tbody tr.status-verde {
+  border-left: 3px solid #27ae60;
+}
+
+.products-table tbody tr.status-amarillo {
+  border-left: 3px solid #f2c94c;
+}
+
+.products-table tbody tr.status-rojo {
+  border-left: 3px solid #eb5757;
+}
+
+/* Resumen estadístico */
+.summary-stats {
+  margin-top: 32px;
+  margin-bottom: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.section-title-small {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e1e1e;
+  margin: 0 0 20px 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.completed {
+  background: #d4edda;
+  border-color: #27ae60;
+}
+
+.stat-card.in-progress {
+  background: #fff3cd;
+  border-color: #f2c94c;
+}
+
+.stat-card.not-completed {
+  background: #f8d7da;
+  border-color: #eb5757;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1e1e1e;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-card.completed .stat-value {
+  color: #155724;
+}
+
+.stat-card.in-progress .stat-value {
+  color: #856404;
+}
+
+.stat-card.not-completed .stat-value {
+  color: #721c24;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-card.completed .stat-label,
+.stat-card.in-progress .stat-label,
+.stat-card.not-completed .stat-label {
+  color: #333;
+}
+
+.compliance-value .high-compliance {
+  color: #27ae60;
+  font-weight: 700;
 }
 
