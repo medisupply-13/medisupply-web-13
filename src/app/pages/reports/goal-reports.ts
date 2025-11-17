@@ -283,8 +283,11 @@ export class GoalReports implements OnInit {
       };
     }
 
-    // Sumar ventas y metas individuales de productos
-    const productoAchieved = data.detalle_productos.reduce((sum: number, p: any) => sum + (p.ventas || 0), 0);
+    // Para la métrica "Producto", usar ventasTotales (todas las ventas del vendedor)
+    // en lugar de sumar solo los productos del plan, porque puede haber productos
+    // vendidos que no están en el plan de venta
+    const productoAchieved = data.ventasTotales || 0;
+    // La meta de productos es la suma de las metas individuales de los productos del plan
     const productoGoal = data.detalle_productos.reduce((sum: number, p: any) => sum + (p.goal || 0), 0);
     
     // Para región, usar ventas totales y la meta total (que es la meta de la región)
