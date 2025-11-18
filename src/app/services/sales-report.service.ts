@@ -85,14 +85,23 @@ export class SalesReportService {
   getSalesReport(request: SalesReportRequest): Observable<SalesReportResponse> {
     const url = `${this.api}reports/sales-report`;
     const startTime = performance.now();
+    const token = this.authService.getToken();
+    const jsonPayload = JSON.stringify(request);
     
     console.log('🔍 SalesReportService: ===== INICIANDO CONSULTA AL BACKEND =====');
     console.log('🌐 SalesReportService: URL completa:', url);
     console.log('📊 SalesReportService: Método HTTP: POST');
     console.log('📋 SalesReportService: Headers: Content-Type: application/json');
-    console.log('📦 SalesReportService: Payload completo:', JSON.stringify(request, null, 2));
+    console.log('📦 SalesReportService: Payload completo:', jsonPayload);
+    console.log('🔑 SalesReportService: Token presente:', !!token);
     console.log('⏱️ SalesReportService: Timestamp inicio:', new Date().toISOString());
     console.log('🕐 SalesReportService: Tiempo de inicio (ms):', startTime);
+    
+    // Generar curl exacto para debugging
+    const curlCommand = `curl -X POST "${url}" \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer ${token || 'TOKEN_MISSING'}" \\\n  -d '${jsonPayload}'`;
+    console.log('=== CURL EXACTO ===');
+    console.log(curlCommand);
+    console.log('==================');
     
     return this.http.post<SalesReportResponse>(url, request).pipe(
       tap((response) => {
@@ -117,13 +126,48 @@ export class SalesReportService {
       catchError((error) => {
         const endTime = performance.now();
         const duration = endTime - startTime;
+        const userRole = this.authService.getRole();
+        const currentUser = this.authService.getCurrentUser();
+        
         console.error('❌ SalesReportService: ===== ERROR EN CONSULTA =====');
         console.error('⏱️ SalesReportService: Timestamp error:', new Date().toISOString());
         console.error('🕐 SalesReportService: Tiempo de error (ms):', endTime);
         console.error('⏰ SalesReportService: Duración hasta error (ms):', Math.round(duration * 100) / 100);
         console.error('📊 SalesReportService: Status HTTP:', error.status || 'Desconocido');
         console.error('📋 SalesReportService: Mensaje de error:', error.message || 'Sin mensaje');
+        console.error('👤 SalesReportService: Rol del usuario:', userRole);
+        console.error('👤 SalesReportService: Usuario actual:', currentUser);
+        
+        // Manejo específico para error 403 (Forbidden)
+        if (error.status === 403) {
+          console.error('🚫 SalesReportService: ===== ERROR 403 - ACCESO DENEGADO =====');
+          console.error('🚫 SalesReportService: El API Gateway o la Lambda autorizadora ha rechazado la petición');
+          console.error('🚫 SalesReportService: Posibles causas:');
+          console.error('  1. El rol del usuario (' + userRole + ') no tiene permisos para este endpoint');
+          console.error('  2. La Lambda autorizadora no está configurada para permitir el rol ' + userRole);
+          console.error('  3. El token no contiene los claims correctos para el rol ' + userRole);
+          console.error('  4. El endpoint /reports/sales-report no está configurado para permitir vendedores (SUPERVISOR/SELLER)');
+          console.error('🚫 SalesReportService: SOLUCIÓN: Verificar la configuración del API Gateway y la Lambda autorizadora');
+          console.error('🚫 SalesReportService: Asegurarse de que el rol ' + userRole + ' tenga permisos para /reports/sales-report');
+        }
+        
+        // Intentar extraer el mensaje del body del error si está disponible
+        if (error.error) {
+          console.error('📋 SalesReportService: Error body:', JSON.stringify(error.error, null, 2));
+          if (error.error.message) {
+            console.error('📋 SalesReportService: Mensaje del backend:', error.error.message);
+          }
+          if (error.error.error) {
+            console.error('📋 SalesReportService: Error del backend:', error.error.error);
+          }
+          // Mensajes específicos de API Gateway
+          if (error.error.Message) {
+            console.error('📋 SalesReportService: Mensaje del API Gateway:', error.error.Message);
+          }
+        }
+        
         console.error('🔍 SalesReportService: Error completo:', error);
+        console.error('🔍 SalesReportService: Headers de respuesta:', error.headers);
         console.error('❌ SalesReportService: ===== CONSULTA FALLIDA =====');
         return throwError(() => error);
       })
@@ -173,7 +217,12 @@ export class SalesReportService {
           }
 
           if (ownVendor) {
-            const result = [{ value: ownVendor.value, labelKey: ownVendor.labelKey }];
+            // Para vendedores, incluir también el user_id en el resultado
+            const result = [{ 
+              value: ownVendor.value, 
+              labelKey: ownVendor.labelKey,
+              userId: ownVendor.userId 
+            }];
             console.log('🔐 SalesReportService: Rol SUPERVISOR, restringiendo vendors:', result);
             return result;
           }
@@ -182,7 +231,7 @@ export class SalesReportService {
           return [];
         }
 
-        const vendors = allVendors.map(({ value, labelKey }) => ({ value, labelKey }));
+        const vendors = allVendors.map(({ value, labelKey, userId }) => ({ value, labelKey, userId }));
         console.log('🔄 SalesReportService: Vendedores mapeados:', vendors);
         return vendors;
       }),
