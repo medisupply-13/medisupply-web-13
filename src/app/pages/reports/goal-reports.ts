@@ -240,7 +240,11 @@ export class GoalReports implements OnInit {
     if (!data || data.cumplimiento_region_pct === undefined || data.cumplimiento_region_pct === null) {
       // Si no hay cumplimiento_region_pct, calcular basado en ventas_region y total_goal
       if (data?.ventas_region && data?.total_goal) {
-        return (data.ventas_region / data.total_goal) * 100;
+        const metaRegionMonetaria = (data.total_goal || 0) * 100;
+        if (!metaRegionMonetaria) {
+          return 0;
+        }
+        return (data.ventas_region / metaRegionMonetaria) * 100;
       }
       return 0;
     }
@@ -248,15 +252,12 @@ export class GoalReports implements OnInit {
   }
 
   // Obtener el porcentaje de cumplimiento de un producto
-  // IMPORTANTE: cumplimiento_pct viene como RATIO (16.8 = 1680%), no como porcentaje directo
-  // Necesitamos convertirlo a porcentaje multiplicando por 100
+  // cumplimiento_pct viene listo para mostrarse como porcentaje (ej: 16.8 = 16.8%)
   getProductCumplimientoPct(product: any): number {
     if (!product || product.cumplimiento_pct === undefined || product.cumplimiento_pct === null) {
       return 0;
     }
-    // cumplimiento_pct es un ratio: 16.8 = 1680%, 1.0 = 100%, 0.5 = 50%
-    // Convertir a porcentaje multiplicando por 100
-    return product.cumplimiento_pct * 100;
+    return product.cumplimiento_pct;
   }
 
   // Obtener los productos del detalle
@@ -298,24 +299,25 @@ export class GoalReports implements OnInit {
       };
     }
 
-    // Para la métrica "Producto", usar ventasTotales (todas las ventas del vendedor)
-    // en lugar de sumar solo los productos del plan, porque puede haber productos
-    // vendidos que no están en el plan de venta
-    const productoAchieved = data.ventasTotales || 0;
-    // La meta de productos es la suma de las metas individuales del vendedor (goal_vendor)
-    // Si goal_vendor no está disponible, usar goal (meta regional) como fallback
-    const productoGoal = data.detalle_productos.reduce((sum: number, p: any) => {
-      return sum + (p.goal_vendor || p.goal || 0);
-    }, 0);
+    const productos = data.detalle_productos;
+    const productosConMeta = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
+    const hayProductosConMeta = productosConMeta.length > 0;
+
+    // Para la métrica "Producto", usar sólo los productos con meta definida
+    const productoAchieved = hayProductosConMeta
+      ? productosConMeta.reduce((sum: number, p: any) => sum + (p.ventas || 0), 0)
+      : (data.ventasTotales || 0);
+    const productoGoal = hayProductosConMeta
+      ? productosConMeta.reduce((sum: number, p: any) => sum + ((p.goal_vendor ?? p.goal ?? 0) * 100), 0)
+      : (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
     
-    // Para región, usar ventas_region si está disponible (ventas de todos los vendedores de la región)
+    // Para región, usar ventas_region si está disponible
     const regionAchieved = data.ventas_region || data.ventasTotales || 0;
-    // total_goal viene en centenas (120.0 = 12,000 unidades), convertir a unidades reales
+    // Meta regional (centenas -> moneda)
     const regionGoal = (data.total_goal || 0) * 100;
     
-    // Para Total, usar total_goal_vendor (meta individual del vendedor)
-    // total_goal_vendor viene en centenas (15.0 = 1,500 unidades), convertir a unidades reales
-    const totalGoal = (data.total_goal_vendor || data.total_goal || 0) * 100;
+    // Meta individual del vendedor (centenas -> moneda)
+    const totalGoal = (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
 
     return {
       producto: { achieved: productoAchieved, goal: productoGoal },
@@ -342,15 +344,14 @@ export class GoalReports implements OnInit {
     }
 
     const productos = data.detalle_productos;
-    const productsWithGoal = productos.filter((p: any) => p.goal && p.goal > 0);
-    const productsWithoutGoal = productos.filter((p: any) => !p.goal || p.goal === 0);
+    const productsWithGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
+    const productsWithoutGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) === 0);
     const productsCompleted = productos.filter((p: any) => p.status === 'verde');
     const productsInProgress = productos.filter((p: any) => p.status === 'amarillo');
     const productsNotCompleted = productos.filter((p: any) => p.status === 'rojo');
 
-    // total_goal_vendor viene en centenas (15.0 = 1,500 unidades), convertir a unidades reales
-    const totalGoalVendorConverted = (data.total_goal_vendor || data.total_goal || 0) * 100;
-    
+    const totalGoalVendorConverted = (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
+
     return {
       totalProducts: productos.length,
       productsWithGoal: productsWithGoal.length,
@@ -362,6 +363,42 @@ export class GoalReports implements OnInit {
       totalGoal: totalGoalVendorConverted,
       difference: (data.ventasTotales || 0) - totalGoalVendorConverted
     };
+  }
+
+  // Obtener el status predominante de los productos con meta
+  // Retorna 'verde', 'amarillo' o 'rojo' basado en el status de los productos con meta
+  getProductsWithGoalStatus(): string {
+    const data = this.reportData();
+    if (!data || !data.detalle_productos) {
+      return 'rojo';
+    }
+
+    const productos = data.detalle_productos;
+    const productsWithGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
+    
+    if (productsWithGoal.length === 0) {
+      return 'rojo';
+    }
+
+    // Contar cuántos productos con meta tienen cada status
+    const statusCounts: { [key: string]: number } = {};
+    productsWithGoal.forEach((p: any) => {
+      const status = p.status || 'rojo';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    // Priorizar: verde > amarillo > rojo
+    // Si todos están en verde, retornar verde
+    // Si hay alguno en verde, retornar verde
+    // Si hay alguno en amarillo (y no hay verdes), retornar amarillo
+    // Si todos están en rojo, retornar rojo
+    if (statusCounts['verde'] && statusCounts['verde'] > 0) {
+      return 'verde';
+    }
+    if (statusCounts['amarillo'] && statusCounts['amarillo'] > 0) {
+      return 'amarillo';
+    }
+    return 'rojo';
   }
 
   // Ordenar productos (por defecto por product_id, pero se puede cambiar)

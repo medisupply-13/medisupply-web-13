@@ -89,6 +89,10 @@
           <span class="info-label">Meta Individual del Vendedor:</span>
           <span class="info-value">{{ formatNumber((reportData().total_goal_vendor || 0) * 100) }}</span>
         </div>
+        <div class="info-item" *ngIf="reportData().total_goal">
+          <span class="info-label">Meta Total Región:</span>
+          <span class="info-value">{{ formatNumber((reportData().total_goal || 0) * 100) }}</span>
+        </div>
         <div class="info-item" *ngIf="reportData().num_plans_active">
           <span class="info-label">Planes Activos:</span>
           <span class="info-value">{{ reportData().num_plans_active }}</span>
@@ -132,7 +136,11 @@
           <div class="stat-value">{{ getSummaryStats().productsNotCompleted }}</div>
           <div class="stat-label">{{ 'goalReportNotCompleted' | translate }}</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" [ngClass]="{
+          'completed': getProductsWithGoalStatus() === 'verde',
+          'in-progress': getProductsWithGoalStatus() === 'amarillo',
+          'not-completed': getProductsWithGoalStatus() === 'rojo'
+        }">
           <div class="stat-value">{{ getSummaryStats().productsWithGoal }}</div>
           <div class="stat-label">{{ 'goalReportWithGoal' | translate }}</div>
         </div>
@@ -215,11 +223,11 @@
               <td class="product-id">{{ product.product_id }}</td>
               <td class="sales-value">{{ formatNumber(product.ventas || 0) }}</td>
               <td class="goal-value">
-                <span *ngIf="product.goal_vendor">
-                  {{ formatNumber((product.goal_vendor || 0) * 100) }}
+                <span *ngIf="product.goal_vendor || product.goal">
+                  {{ formatNumber(((product.goal_vendor ?? product.goal ?? 0)) * 100) }}
                 </span>
-                <span *ngIf="!product.goal_vendor">
-                  {{ formatNumber((product.goal || 0) * 100) }}
+                <span *ngIf="!product.goal_vendor && (!product.goal || product.goal === 0)" class="no-goal">
+                  {{ 'goalReportNoGoal' | translate }}
                 </span>
               </td>
               <td class="compliance-value">
