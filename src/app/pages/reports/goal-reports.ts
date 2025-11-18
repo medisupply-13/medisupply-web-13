@@ -204,12 +204,12 @@ export class GoalReports implements OnInit {
     return 'rojo';
   }
 
-  // Obtener el status para Región basado en el porcentaje de cumplimiento
+  // Obtener el status para Región
   getRegionStatus(): string {
     const data = this.reportData();
     if (!data) return 'rojo';
-    // Usar el mismo status que Total ya que ambos tienen la misma meta (total_goal)
-    return this.getTotalStatus();
+    // Usar status_region si está disponible, sino usar el status general
+    return data.status_region || data.status || 'rojo';
   }
 
   // Obtener el status para Total (usar el status del data principal)
@@ -234,14 +234,29 @@ export class GoalReports implements OnInit {
     return data.cumplimiento_total_pct;
   }
 
+  // Obtener el porcentaje de cumplimiento de región
+  getCumplimientoRegionPct(): number {
+    const data = this.reportData();
+    if (!data || data.cumplimiento_region_pct === undefined || data.cumplimiento_region_pct === null) {
+      // Si no hay cumplimiento_region_pct, calcular basado en ventas_region y total_goal
+      if (data?.ventas_region && data?.total_goal) {
+        return (data.ventas_region / data.total_goal) * 100;
+      }
+      return 0;
+    }
+    return data.cumplimiento_region_pct;
+  }
+
   // Obtener el porcentaje de cumplimiento de un producto
-  // El backend devuelve el porcentaje directamente (ej: 7.35 = 7.35%, 0.0 = 0%)
+  // IMPORTANTE: cumplimiento_pct viene como RATIO (16.8 = 1680%), no como porcentaje directo
+  // Necesitamos convertirlo a porcentaje multiplicando por 100
   getProductCumplimientoPct(product: any): number {
     if (!product || product.cumplimiento_pct === undefined || product.cumplimiento_pct === null) {
       return 0;
     }
-    // El backend ya devuelve el porcentaje directamente, no necesita conversión
-    return product.cumplimiento_pct;
+    // cumplimiento_pct es un ratio: 16.8 = 1680%, 1.0 = 100%, 0.5 = 50%
+    // Convertir a porcentaje multiplicando por 100
+    return product.cumplimiento_pct * 100;
   }
 
   // Obtener los productos del detalle
@@ -287,17 +302,25 @@ export class GoalReports implements OnInit {
     // en lugar de sumar solo los productos del plan, porque puede haber productos
     // vendidos que no están en el plan de venta
     const productoAchieved = data.ventasTotales || 0;
-    // La meta de productos es la suma de las metas individuales de los productos del plan
-    const productoGoal = data.detalle_productos.reduce((sum: number, p: any) => sum + (p.goal || 0), 0);
+    // La meta de productos es la suma de las metas individuales del vendedor (goal_vendor)
+    // Si goal_vendor no está disponible, usar goal (meta regional) como fallback
+    const productoGoal = data.detalle_productos.reduce((sum: number, p: any) => {
+      return sum + (p.goal_vendor || p.goal || 0);
+    }, 0);
     
-    // Para región, usar ventas totales y la meta total (que es la meta de la región)
-    const regionAchieved = data.ventasTotales || 0;
-    const regionGoal = data.total_goal || 0;
+    // Para región, usar ventas_region si está disponible (ventas de todos los vendedores de la región)
+    const regionAchieved = data.ventas_region || data.ventasTotales || 0;
+    // total_goal viene en centenas (120.0 = 12,000 unidades), convertir a unidades reales
+    const regionGoal = (data.total_goal || 0) * 100;
+    
+    // Para Total, usar total_goal_vendor (meta individual del vendedor)
+    // total_goal_vendor viene en centenas (15.0 = 1,500 unidades), convertir a unidades reales
+    const totalGoal = (data.total_goal_vendor || data.total_goal || 0) * 100;
 
     return {
       producto: { achieved: productoAchieved, goal: productoGoal },
       region: { achieved: regionAchieved, goal: regionGoal },
-      total: { achieved: data.ventasTotales || 0, goal: data.total_goal || 0 }
+      total: { achieved: data.ventasTotales || 0, goal: totalGoal }
     };
   }
 
@@ -325,6 +348,9 @@ export class GoalReports implements OnInit {
     const productsInProgress = productos.filter((p: any) => p.status === 'amarillo');
     const productsNotCompleted = productos.filter((p: any) => p.status === 'rojo');
 
+    // total_goal_vendor viene en centenas (15.0 = 1,500 unidades), convertir a unidades reales
+    const totalGoalVendorConverted = (data.total_goal_vendor || data.total_goal || 0) * 100;
+    
     return {
       totalProducts: productos.length,
       productsWithGoal: productsWithGoal.length,
@@ -333,8 +359,8 @@ export class GoalReports implements OnInit {
       productsInProgress: productsInProgress.length,
       productsNotCompleted: productsNotCompleted.length,
       totalSales: data.ventasTotales || 0,
-      totalGoal: data.total_goal || 0,
-      difference: (data.ventasTotales || 0) - (data.total_goal || 0)
+      totalGoal: totalGoalVendorConverted,
+      difference: (data.ventasTotales || 0) - totalGoalVendorConverted
     };
   }
 

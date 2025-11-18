@@ -40,20 +40,28 @@ export interface SalesComplianceRequest {
 export interface SalesComplianceResponse {
   data: {
     cumplimiento_total_pct: number;
+    cumplimiento_region_pct?: number;
     detalle_productos: Array<{
       cumplimiento_pct: number;
       goal: number;
+      goal_vendor?: number;
       product_id: number;
       status: string;
       ventas: number;
     }>;
+    num_plans_active?: number;
+    num_sellers_region?: number;
     pedidos: number;
     period_end: string;
     period_start: string;
+    region?: string;
     status: string;
+    status_region?: string;
     total_goal: number;
+    total_goal_vendor?: number;
     vendor_id: number;
     ventasTotales: number;
+    ventas_region?: number;
   };
   success: boolean;
 }
