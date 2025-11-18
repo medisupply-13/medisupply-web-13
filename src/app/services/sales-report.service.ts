@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface SalesReportRequest {
   vendor_id: string;
@@ -73,7 +74,10 @@ export class SalesReportService {
   private api = environment.baseUrl;
   private offerApi = environment.offerUrl;
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {
     console.log('🏗️ SalesReportService: Servicio instanciado');
     console.log('🌐 SalesReportService: URL base configurada:', this.api);
   }
@@ -133,7 +137,7 @@ export class SalesReportService {
     console.log('🔍 SalesReportService: Solicitando vendedores (users/sellers)');
     console.log('🌐 SalesReportService: URL completa:', url);
 
-    return this.http.get<{ data: Array<{ id: number; name: string; active: boolean; email: string; region: string }>; success: boolean }>(url).pipe(
+    return this.http.get<{ data: Array<{ id: number; name: string; active: boolean; email: string; region: string; user_id?: number }>; success: boolean }>(url).pipe(
       tap((response) => {
         const endTime = performance.now();
         console.log('✅ SalesReportService: Vendedores recibidos en', Math.round((endTime - startTime) * 100) / 100, 'ms');
@@ -144,12 +148,41 @@ export class SalesReportService {
           console.error('❌ SalesReportService: Respuesta de vendedores no tiene data o no es un arreglo:', response);
           return [] as { value: string; labelKey: string }[];
         }
-        const vendors = response.data
+        const allVendors = response.data
           .filter(v => v.active !== false) // Filtrar solo vendors activos
           .map((v) => ({
             value: String(v.id),
-            labelKey: v.name
+            labelKey: v.name,
+            email: v.email?.toLowerCase() || '',
+            userId: v.user_id ? String(v.user_id) : null
           }));
+
+        const role = this.authService.getRole();
+        const currentUser = this.authService.getCurrentUser();
+
+        if (role === 'SUPERVISOR' && currentUser) {
+          const currentEmail = currentUser.email?.toLowerCase();
+          const currentUserId = currentUser.user_id ? String(currentUser.user_id) : null;
+
+          let ownVendor = null;
+          if (currentUserId) {
+            ownVendor = allVendors.find(v => v.userId === currentUserId);
+          }
+          if (!ownVendor && currentEmail) {
+            ownVendor = allVendors.find(v => v.email === currentEmail);
+          }
+
+          if (ownVendor) {
+            const result = [{ value: ownVendor.value, labelKey: ownVendor.labelKey }];
+            console.log('🔐 SalesReportService: Rol SUPERVISOR, restringiendo vendors:', result);
+            return result;
+          }
+
+          console.warn('⚠️ SalesReportService: No se encontró vendor para el usuario actual, retornando lista vacía');
+          return [];
+        }
+
+        const vendors = allVendors.map(({ value, labelKey }) => ({ value, labelKey }));
         console.log('🔄 SalesReportService: Vendedores mapeados:', vendors);
         return vendors;
       }),
