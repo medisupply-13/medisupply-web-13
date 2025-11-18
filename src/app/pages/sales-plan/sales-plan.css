@@ -367,6 +367,40 @@
   border: 1px solid #f5c6cb;
 }
 
+.stock-error-message {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 8px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.stock-error-message mat-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.stock-error-message .error-text {
+  flex: 1;
+}
+
+.stock-error-message .error-text pre {
+  margin: 0;
+  font-family: inherit;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .sales-plan-container {
@@ -812,4 +846,68 @@ mat-divider {
   border-color: #1976d2;
   transform: perspective(1000px) rotateY(1deg) scale(1.1);
   box-shadow: 0 6px 20px rgba(25, 118, 210, 0.4);
+}
+
+/* Estilos para el error de stock en el modal */
+.product-stock-error {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.product-stock-error mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.product-stock-error .error-text {
+  flex: 1;
+}
+
+.product-stock-error .error-text pre {
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.validating-message {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.validating-message mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
