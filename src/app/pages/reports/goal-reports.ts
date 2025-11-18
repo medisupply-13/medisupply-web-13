@@ -180,6 +180,12 @@ export class GoalReports implements OnInit {
     return 'red';
   }
 
+  getStatusLabel(status: string): string {
+    if (status === 'verde') return 'Cumplido';
+    if (status === 'amarillo') return 'En progreso';
+    return 'Sin cumplir';
+  }
+
   // Obtener el status para Producto (basado en detalle_productos)
   getProductStatus(): string {
     const data = this.reportData();
@@ -198,12 +204,12 @@ export class GoalReports implements OnInit {
     return 'rojo';
   }
 
-  // Obtener el status para Región basado en el porcentaje de cumplimiento
+  // Obtener el status para Región
   getRegionStatus(): string {
     const data = this.reportData();
     if (!data) return 'rojo';
-    // Usar el mismo status que Total ya que ambos tienen la misma meta (total_goal)
-    return this.getTotalStatus();
+    // Usar status_region si está disponible, sino usar el status general
+    return data.status_region || data.status || 'rojo';
   }
 
   // Obtener el status para Total (usar el status del data principal)
@@ -217,6 +223,71 @@ export class GoalReports implements OnInit {
     return new Intl.NumberFormat('es-CO').format(value);
   }
 
+  // Obtener el porcentaje de cumplimiento total
+  // El backend devuelve el porcentaje directamente (ej: 11.04 = 11.04%)
+  getCumplimientoTotalPct(): number {
+    const data = this.reportData();
+    if (!data || data.cumplimiento_total_pct === undefined || data.cumplimiento_total_pct === null) {
+      return 0;
+    }
+    // El backend ya devuelve el porcentaje directamente, no necesita conversión
+    return data.cumplimiento_total_pct;
+  }
+
+  // Obtener el porcentaje de cumplimiento de región
+  getCumplimientoRegionPct(): number {
+    const data = this.reportData();
+    if (!data || data.cumplimiento_region_pct === undefined || data.cumplimiento_region_pct === null) {
+      // Si no hay cumplimiento_region_pct, calcular basado en ventas_region y total_goal
+      if (data?.ventas_region && data?.total_goal) {
+        const metaRegionMonetaria = (data.total_goal || 0) * 100;
+        if (!metaRegionMonetaria) {
+          return 0;
+        }
+        return (data.ventas_region / metaRegionMonetaria) * 100;
+      }
+      return 0;
+    }
+    return data.cumplimiento_region_pct;
+  }
+
+  // Obtener el porcentaje de cumplimiento de un producto
+  // cumplimiento_pct viene listo para mostrarse como porcentaje (ej: 16.8 = 16.8%)
+  getProductCumplimientoPct(product: any): number {
+    if (!product || product.cumplimiento_pct === undefined || product.cumplimiento_pct === null) {
+      return 0;
+    }
+    return product.cumplimiento_pct;
+  }
+
+  // Obtener los productos del detalle
+  getDetalleProductos(): any[] {
+    const data = this.reportData();
+    if (!data || !data.detalle_productos || !Array.isArray(data.detalle_productos)) {
+      return [];
+    }
+    return data.detalle_productos;
+  }
+
+  // Formatear fecha
+  formatDate(dateString: string): string {
+    if (!dateString) return '';
+    try {
+      // Parsear la fecha como UTC para evitar problemas de zona horaria
+      // El formato del backend es "YYYY-MM-DD"
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      return new Intl.DateTimeFormat('es-CO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC'
+      }).format(date);
+    } catch {
+      return dateString;
+    }
+  }
+
   // Calcular métricas agregadas desde detalle_productos
   getAggregatedMetrics() {
     const data = this.reportData();
@@ -228,19 +299,113 @@ export class GoalReports implements OnInit {
       };
     }
 
-    // Sumar ventas y metas individuales de productos
-    const productoAchieved = data.detalle_productos.reduce((sum: number, p: any) => sum + (p.ventas || 0), 0);
-    const productoGoal = data.detalle_productos.reduce((sum: number, p: any) => sum + (p.goal || 0), 0);
+    const productos = data.detalle_productos;
+    const productosConMeta = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
+    const hayProductosConMeta = productosConMeta.length > 0;
+
+    // Para la métrica "Producto", usar sólo los productos con meta definida
+    const productoAchieved = hayProductosConMeta
+      ? productosConMeta.reduce((sum: number, p: any) => sum + (p.ventas || 0), 0)
+      : (data.ventasTotales || 0);
+    const productoGoal = hayProductosConMeta
+      ? productosConMeta.reduce((sum: number, p: any) => sum + ((p.goal_vendor ?? p.goal ?? 0) * 100), 0)
+      : (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
     
-    // Para región, usar ventas totales y la meta total (que es la meta de la región)
-    const regionAchieved = data.ventasTotales || 0;
-    const regionGoal = data.total_goal || 0;
+    // Para región, usar ventas_region si está disponible
+    const regionAchieved = data.ventas_region || data.ventasTotales || 0;
+    // Meta regional (centenas -> moneda)
+    const regionGoal = (data.total_goal || 0) * 100;
+    
+    // Meta individual del vendedor (centenas -> moneda)
+    const totalGoal = (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
 
     return {
       producto: { achieved: productoAchieved, goal: productoGoal },
       region: { achieved: regionAchieved, goal: regionGoal },
-      total: { achieved: data.ventasTotales || 0, goal: data.total_goal || 0 }
+      total: { achieved: data.ventasTotales || 0, goal: totalGoal }
     };
+  }
+
+  // Obtener resumen estadístico
+  getSummaryStats() {
+    const data = this.reportData();
+    if (!data || !data.detalle_productos) {
+      return {
+        totalProducts: 0,
+        productsWithGoal: 0,
+        productsWithoutGoal: 0,
+        productsCompleted: 0,
+        productsInProgress: 0,
+        productsNotCompleted: 0,
+        totalSales: 0,
+        totalGoal: 0,
+        difference: 0
+      };
+    }
+
+    const productos = data.detalle_productos;
+    const productsWithGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
+    const productsWithoutGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) === 0);
+    const productsCompleted = productos.filter((p: any) => p.status === 'verde');
+    const productsInProgress = productos.filter((p: any) => p.status === 'amarillo');
+    const productsNotCompleted = productos.filter((p: any) => p.status === 'rojo');
+
+    const totalGoalVendorConverted = (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
+
+    return {
+      totalProducts: productos.length,
+      productsWithGoal: productsWithGoal.length,
+      productsWithoutGoal: productsWithoutGoal.length,
+      productsCompleted: productsCompleted.length,
+      productsInProgress: productsInProgress.length,
+      productsNotCompleted: productsNotCompleted.length,
+      totalSales: data.ventasTotales || 0,
+      totalGoal: totalGoalVendorConverted,
+      difference: (data.ventasTotales || 0) - totalGoalVendorConverted
+    };
+  }
+
+  // Obtener el status predominante de los productos con meta
+  // Retorna 'verde', 'amarillo' o 'rojo' basado en el status de los productos con meta
+  getProductsWithGoalStatus(): string {
+    const data = this.reportData();
+    if (!data || !data.detalle_productos) {
+      return 'rojo';
+    }
+
+    const productos = data.detalle_productos;
+    const productsWithGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
+    
+    if (productsWithGoal.length === 0) {
+      return 'rojo';
+    }
+
+    // Contar cuántos productos con meta tienen cada status
+    const statusCounts: { [key: string]: number } = {};
+    productsWithGoal.forEach((p: any) => {
+      const status = p.status || 'rojo';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    // Priorizar: verde > amarillo > rojo
+    // Si todos están en verde, retornar verde
+    // Si hay alguno en verde, retornar verde
+    // Si hay alguno en amarillo (y no hay verdes), retornar amarillo
+    // Si todos están en rojo, retornar rojo
+    if (statusCounts['verde'] && statusCounts['verde'] > 0) {
+      return 'verde';
+    }
+    if (statusCounts['amarillo'] && statusCounts['amarillo'] > 0) {
+      return 'amarillo';
+    }
+    return 'rojo';
+  }
+
+  // Ordenar productos (por defecto por product_id, pero se puede cambiar)
+  getDetalleProductosSorted(): any[] {
+    const productos = this.getDetalleProductos();
+    // Ordenar por product_id ascendente
+    return [...productos].sort((a, b) => (a.product_id || 0) - (b.product_id || 0));
   }
 }
 

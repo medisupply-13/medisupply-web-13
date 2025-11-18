@@ -8,6 +8,8 @@ import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { NgxChartsModule } from '@swimlane/ngx-charts';
 import { curveLinear } from 'd3-shape';
 import { SalesReportService, SalesReportRequest } from '../../services/sales-report.service';
+import { ACTIVE_TRANSLATIONS } from '../../shared/lang/lang-store';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-sales-report',
@@ -26,7 +28,10 @@ export class SalesReport implements OnInit {
   reportData = signal<any | null>(null);
   curveLinear = curveLinear;
 
-  constructor(private salesReportService: SalesReportService) {
+  constructor(
+    private salesReportService: SalesReportService,
+    private authService: AuthService
+  ) {
     console.log('🏗️ SalesReport: Componente instanciado con servicio');
   }
 
@@ -99,6 +104,13 @@ export class SalesReport implements OnInit {
         this.vendedores.set(vendors);
         console.log('✅ SalesReport: Vendors asignados a vendedores:', this.vendedores());
         console.log('📋 SalesReport: Estado final de vendedores:', JSON.stringify(this.vendedores(), null, 2));
+        
+        // Si el usuario es vendedor (SUPERVISOR) y hay exactamente un vendedor, auto-seleccionarlo
+        const role = this.authService.getRole();
+        if (role === 'SUPERVISOR' && vendors.length === 1) {
+          console.log('🔒 SalesReport: Usuario es vendedor, auto-seleccionando su vendedor:', vendors[0].value);
+          this.vendedor.set(vendors[0].value);
+        }
       },
       error: (error) => {
         console.error('❌ SalesReport: Error cargando vendors:', error);
@@ -308,16 +320,25 @@ export class SalesReport implements OnInit {
     
     // Preparar datos de la petición
     const country = localStorage.getItem('userCountry') || 'CO';
+    const role = this.authService.getRole();
+    const currentUser = this.authService.getCurrentUser();
+    
+    // El backend siempre espera seller_id (no user_id)
+    // Para ADMIN: puede consultar cualquier vendor_id
+    // Para SUPERVISOR: solo puede consultar su propio vendor_id (seller_id)
     const request: SalesReportRequest = {
-      vendor_id: this.vendedor(),
+      vendor_id: this.vendedor(), // Siempre usar seller_id
       period: this.periodo()
     };
 
     console.log('📋 SalesReport: Parámetros del usuario:');
-    console.log('👤 SalesReport: Vendedor seleccionado:', this.vendedor());
+    console.log('👤 SalesReport: Rol del usuario:', role);
+    console.log('👤 SalesReport: Usuario actual:', currentUser);
+    console.log('👤 SalesReport: Vendedor seleccionado (seller_id):', this.vendedor());
     console.log('📅 SalesReport: Período seleccionado:', this.periodo());
     console.log('🌍 SalesReport: País seleccionado:', country);
     console.log('📦 SalesReport: Request completo:', JSON.stringify(request, null, 2));
+    console.log('🔍 SalesReport: Vendor ID tipo:', typeof request.vendor_id);
 
     // Realizar petición al backend
     this.salesReportService.getSalesReport(request).subscribe({
@@ -403,8 +424,14 @@ export class SalesReport implements OnInit {
         console.error('📋 SalesReport: Mensaje de error:', error.message || 'Sin mensaje');
         console.error('🔍 SalesReport: Error completo:', error);
         
-        // Mensaje específico para cuando no hay datos (404)
-        if (error.status === 404) {
+        // Mensaje específico para diferentes tipos de errores
+        if (error.status === 403) {
+          console.error('❌ SalesReport: Error 403 - Acceso denegado por el API Gateway');
+          console.error('❌ SalesReport: El rol del usuario no tiene permisos para este endpoint');
+          console.error('❌ SalesReport: Verificar la configuración de la Lambda autorizadora en AWS API Gateway');
+          this.messageType.set('error');
+          this.messageText.set('salesReportAccessDenied');
+        } else if (error.status === 404) {
           console.error('❌ SalesReport: Error 404 - No hay datos para los parámetros especificados');
           this.messageType.set('error');
           this.messageText.set('salesReportNoDataForParams');
@@ -424,6 +451,22 @@ export class SalesReport implements OnInit {
   // Función trackBy para evitar duplicados en el template
   trackByProduct(index: number, producto: any): string {
     return `${producto.nombre}-${producto.ventas}`;
+  }
+
+  // Método para obtener la traducción del período
+  getTranslatedPeriod(periodType: string): string {
+    if (!periodType) return periodType;
+    const periodMap: Record<string, string> = {
+      'bimestral': 'salesReportPeriodBimestral',
+      'trimestral': 'salesReportPeriodTrimestral',
+      'semestral': 'salesReportPeriodSemestral',
+      'anual': 'salesReportPeriodAnual'
+    };
+    const translationKey = periodMap[periodType];
+    if (translationKey) {
+      return ACTIVE_TRANSLATIONS[translationKey] || periodType;
+    }
+    return periodType;
   }
 
   // Métodos auxiliares para generar fechas

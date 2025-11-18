@@ -121,6 +121,8 @@ export class SalesPlan {
   showGoalModal = false;
   currentProduct: Product | null = null;
   goalValue = '';
+  productStockError = signal<string | null>(null);
+  validatingStock = signal<boolean>(false);
 
   // Modal de confirmación de creación
   showConfirmModal = false;
@@ -318,13 +320,18 @@ export class SalesPlan {
       next: (resp) => {
         console.log('🛒 SalesPlan: Respuesta recibida:', resp);
         const list = (resp.products || []) as unknown as BackendProduct[];
-        this.products = list.map((p: any) => ({
-          id: String(p.product_id ?? p.id ?? p.sku ?? ''),
-          name: p.name,
-          price: Number(p.value) || 0,
-          image: p.image_url || undefined,
-        }));
+        this.products = list.map((p: any) => {
+          // Usar product_id directamente como string para mantener el ID numérico del backend
+          const productId = String(p.product_id ?? p.id ?? p.sku ?? '0');
+          return {
+            id: productId, // String con el product_id del backend (ej: "1", "37", "190")
+            name: p.name,
+            price: Number(p.value) || 0,
+            image: p.image_url || undefined,
+          };
+        });
         console.log('🛒 SalesPlan: Productos mapeados:', this.products.length);
+        console.log('🛒 SalesPlan: Primeros 3 productos con IDs:', this.products.slice(0, 3).map(p => ({ id: p.id, name: p.name, id_as_number: Number(p.id) })));
 
         // Forzar detección de cambios en caso de que no se actualice de inmediato
         this.appRef.tick();
@@ -392,22 +399,154 @@ export class SalesPlan {
     event.stopPropagation();
     this.currentProduct = product;
     this.goalValue = product.goal ? product.goal.toString() : '';
+    this.productStockError.set(null); // Limpiar error anterior
+    console.log('🎯 SalesPlan: Modal abierto para producto:', {
+      id: product.id,
+      name: product.name,
+      id_type: typeof product.id,
+      id_as_number: Number(product.id)
+    });
     this.showGoalModal = true;
   }
 
-  saveGoal() {
+  saveGoal(event?: Event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    console.log('🎯 SalesPlan: ===== MÉTODO saveGoal() LLAMADO =====');
+    console.log('🎯 SalesPlan: currentProduct:', this.currentProduct);
+    console.log('🎯 SalesPlan: goalValue:', this.goalValue);
+    console.log('🎯 SalesPlan: goalValue type:', typeof this.goalValue);
+    console.log('🎯 SalesPlan: goalValue number:', Number(this.goalValue));
+    console.log('🎯 SalesPlan: Validaciones:', {
+      hasCurrentProduct: !!this.currentProduct,
+      hasGoalValue: !!this.goalValue,
+      goalValueString: String(this.goalValue),
+      isNumber: !isNaN(Number(this.goalValue)),
+      isPositive: Number(this.goalValue) > 0,
+      allConditions: !!(this.currentProduct && this.goalValue && !isNaN(Number(this.goalValue)) && Number(this.goalValue) > 0)
+    });
+    
+    // IMPORTANTE: NUNCA asignar meta sin validar stock
+    // La validación de stock es OBLIGATORIA antes de asignar cualquier meta
     if (this.currentProduct && this.goalValue && !isNaN(Number(this.goalValue)) && Number(this.goalValue) > 0) {
-      this.currentProduct.goal = Number(this.goalValue);
-      // Asegurar que el producto con meta quede seleccionado
-      const exists = this.selectedProducts.some(p => p.id === this.currentProduct!.id);
-      if (!exists) {
-        this.selectedProducts.push(this.currentProduct);
+      // Convertir el ID del producto (que es string del product_id del backend) a número
+      const productId = parseInt(this.currentProduct.id, 10);
+      const individualGoal = Number(this.goalValue);
+      
+      // Verificar que el productId sea válido
+      if (isNaN(productId) || productId <= 0) {
+        console.error('❌ SalesPlan: Product ID inválido:', {
+          originalId: this.currentProduct.id,
+          parsedId: productId,
+          product: this.currentProduct
+        });
+        this.productStockError.set('Error: ID de producto inválido');
+        return;
       }
-      // Reset manual value cuando se recalcula automáticamente
-      this.manualGoalValue.set(null);
-      this.updateTotalGoalFromProducts();
-      this.selectedProductsVersion.set(this.selectedProductsVersion() + 1);
-      this.closeGoalModal();
+      
+      // Logs en el componente
+      console.log('🎯 SalesPlan: ===== INICIANDO VALIDACIÓN DE META =====');
+      console.log('🎯 SalesPlan: Producto actual:', this.currentProduct);
+      console.log('🎯 SalesPlan: ID del producto (string):', this.currentProduct.id);
+      console.log('🎯 SalesPlan: ID del producto (number):', productId);
+      console.log('🎯 SalesPlan: Meta ingresada (string):', this.goalValue);
+      console.log('🎯 SalesPlan: Meta ingresada (number):', individualGoal);
+      console.log('🎯 SalesPlan: Tipos:', {
+        productIdType: typeof productId,
+        individualGoalType: typeof individualGoal,
+        originalIdType: typeof this.currentProduct.id,
+        goalValueType: typeof this.goalValue
+      });
+      console.log('🎯 SalesPlan: URL esperada:', `https://r1kyo276f3.execute-api.us-east-1.amazonaws.com/prod/products/${productId}/validate-stock?individual_goal=${individualGoal}`);
+      console.log('🎯 SalesPlan: =======================================');
+      
+      // Validar stock antes de asignar la meta
+      this.validatingStock.set(true);
+      this.productStockError.set(null);
+      
+      console.log('🎯 SalesPlan: Llamando a validateStock con:', { productId, individualGoal });
+      
+      this.offerService.validateStock(productId, individualGoal).subscribe({
+        next: (response) => {
+          console.log('🎯 SalesPlan: ===== RESPUESTA RECIBIDA EN COMPONENTE =====');
+          console.log('🎯 SalesPlan: Respuesta:', response);
+          console.log('🎯 SalesPlan: response.valid:', response.valid);
+          console.log('🎯 SalesPlan: response.message:', response.message);
+          console.log('🎯 SalesPlan: response.available_stock:', response.available_stock);
+          console.log('🎯 SalesPlan: ============================================');
+          
+          this.validatingStock.set(false);
+          
+          if (response.valid === true) {
+            console.log('✅ SalesPlan: Stock válido, asignando meta...');
+            // Stock válido, asignar la meta SOLO si valid es explícitamente true
+            this.currentProduct!.goal = individualGoal;
+            // Asegurar que el producto con meta quede seleccionado
+            const exists = this.selectedProducts.some(p => p.id === this.currentProduct!.id);
+            if (!exists) {
+              this.selectedProducts.push(this.currentProduct!);
+            }
+            // Reset manual value cuando se recalcula automáticamente
+            this.manualGoalValue.set(null);
+            this.updateTotalGoalFromProducts();
+            this.selectedProductsVersion.set(this.selectedProductsVersion() + 1);
+            this.productStockError.set(null);
+            this.closeGoalModal();
+            console.log('✅ SalesPlan: Meta asignada exitosamente');
+          } else {
+            console.warn('⚠️ SalesPlan: Stock insuficiente según respuesta');
+            // Stock insuficiente
+            const availableStock = response.available_stock !== undefined ? response.available_stock : 'N/A';
+            const reason = response.message || 'Stock insuficiente';
+            // Mostrar mensaje conciso sin duplicar información
+            if (reason.includes('Solicitado') || reason.includes('Disponible')) {
+              this.productStockError.set(reason);
+            } else if (availableStock !== 'N/A') {
+              this.productStockError.set(
+                `${reason}\nSolicitado: ${individualGoal} unidades\nDisponible: ${availableStock} unidades`
+              );
+            } else {
+              this.productStockError.set(reason);
+            }
+          }
+        },
+        error: (error) => {
+          console.error('🎯 SalesPlan: ===== ERROR EN COMPONENTE =====');
+          console.error('🎯 SalesPlan: Error recibido:', error);
+          console.error('🎯 SalesPlan: Error.message:', error?.message);
+          console.error('🎯 SalesPlan: Error.error:', error?.error);
+          console.error('🎯 SalesPlan: Error disponible:', error?.available_stock);
+          console.error('🎯 SalesPlan: ================================');
+          
+          this.validatingStock.set(false);
+          // IMPORTANTE: Si hay un error en la validación, NO asignar la meta
+          // El error indica que NO hay suficiente stock o que hubo un problema con la validación
+          const availableStock = error?.available_stock !== undefined ? error.available_stock : 'N/A';
+          const reason = error?.message || error?.error?.message || 'No hay suficiente stock disponible';
+          // Mostrar mensaje conciso sin duplicar información
+          if (reason.includes('Solicitado') || reason.includes('Disponible')) {
+            this.productStockError.set(reason);
+          } else if (availableStock !== 'N/A') {
+            this.productStockError.set(
+              `${reason}\nSolicitado: ${individualGoal} unidades\nDisponible: ${availableStock} unidades`
+            );
+          } else {
+            this.productStockError.set(reason);
+          }
+          // NO asignar la meta cuando hay error
+          console.error('❌ SalesPlan: NO se asignará la meta debido al error en la validación');
+        }
+      });
+    } else {
+      console.warn('⚠️ SalesPlan: Validación fallida antes de enviar:', {
+        currentProduct: !!this.currentProduct,
+        goalValue: this.goalValue,
+        isNumber: !isNaN(Number(this.goalValue)),
+        isPositive: Number(this.goalValue) > 0
+      });
     }
   }
 
@@ -425,6 +564,8 @@ export class SalesPlan {
     this.showGoalModal = false;
     this.currentProduct = null;
     this.goalValue = '';
+    this.productStockError.set(null);
+    this.validatingStock.set(false);
   }
 
   clearProductFilter() {
@@ -565,17 +706,26 @@ export class SalesPlan {
       const manualValue = this.manualGoalValue();
       const finalTotalGoal = manualValue !== null ? manualValue : totalValue;
       
+      // Productos con meta > 0
+      const productsWithGoals = this.products.filter(p => (p.goal || 0) > 0);
+      
       const salesPlanData = {
         region: this.salesPlanForm.get('region')?.value, // 'Norte', 'Centro', ...
         quarter: this.salesPlanForm.get('quarter')?.value, // 'Q1'..'Q4'
         year: new Date().getFullYear(),
         total_goal: finalTotalGoal, // valor monetario de la meta total (manual o calculado)
-        products: this.products
-          .filter(p => (p.goal || 0) > 0)
-          .map(p => ({
+        products: productsWithGoals.map(p => {
+          // Convertir la meta de unidades a valor monetario para que la comparación
+          // en el reporte de cumplimiento sea correcta (valor monetario vs valor monetario)
+          const units = p.goal || 0;
+          const unitPrice = this.convertValue(p.price);
+          const goalValue = units * unitPrice;
+          
+          return {
             product_id: Number(p.id) || 0,
-            individual_goal: p.goal || 0
-          }))
+            individual_goal: goalValue // valor monetario (unidades × precio)
+          };
+        })
       };
       
       console.log('Plan de venta a enviar:', salesPlanData);
@@ -587,6 +737,8 @@ export class SalesPlan {
           const ok = !!resp && (resp as any).success === true || typeof (resp as any)?.plan_id !== 'undefined';
           this.saveStatus.set(ok ? 'success' : 'error');
           this.showConfirmModal = false;
+          // Limpiar errores de stock si todo salió bien
+          this.clearError('stock');
           // No redirigir automáticamente; permanecer en la página
         },
         error: () => {
