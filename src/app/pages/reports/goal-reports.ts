@@ -148,14 +148,35 @@ export class GoalReports implements OnInit {
         console.error('📋 GoalReports: Mensaje de error:', error.message || 'Sin mensaje');
         console.error('🔍 GoalReports: Error completo:', error);
         console.error('📦 GoalReports: Request que falló:', JSON.stringify(request, null, 2));
+        
+        // Extraer información del error del backend si está disponible
+        const errorMessage = error?.error?.message || error?.message || '';
+        const errorType = error?.error?.error_type || '';
+        const errorStatus = error?.status || 0;
+        
+        console.error('📋 GoalReports: Mensaje del backend:', errorMessage);
+        console.error('📋 GoalReports: Tipo de error:', errorType);
+        console.error('📋 GoalReports: Status HTTP:', errorStatus);
         console.error('❌ GoalReports: ===== ERROR PROCESADO =====');
-        if (error.status === 404) {
-          this.messageType.set('error');
+        
+        this.messageType.set('error');
+        
+        // Manejar diferentes tipos de errores
+        // Verificar primero por tipo de error específico
+        if (errorType === 'region_mismatch' || errorMessage.toLowerCase().includes('región') || errorMessage.toLowerCase().includes('region')) {
+          // Error específico de región - mostrar mensaje más descriptivo
+          this.messageText.set('goalReportRegionError');
+        } else if (errorType === 'not_found' || errorStatus === 404) {
+          // Error de no encontrado (plan, datos, etc.)
+          this.messageText.set('goalReportNoData');
+        } else if (errorMessage.toLowerCase().includes('plan') || errorMessage.toLowerCase().includes('plan de venta')) {
+          // Error relacionado con plan de venta no encontrado
           this.messageText.set('goalReportNoData');
         } else {
-          this.messageType.set('error');
+          // Error genérico
           this.messageText.set('goalReportError');
         }
+        
         this.showMessage.set(true);
         this.reportData.set(null);
       },

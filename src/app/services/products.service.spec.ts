@@ -854,5 +854,120 @@ describe('ProductsService', () => {
       req.error(new ErrorEvent('Not found'), { status: 404 });
     });
   });
+
+  describe('insertProduct', () => {
+    it('should insert a new product successfully', (done) => {
+      const newProduct = {
+        sku: 'MED-004',
+        name: 'Producto 4',
+        value: 4000,
+        category_name: 'Suministros',
+        quantity: 75,
+        warehouse_id: 1,
+        section: 'A',
+        aisle: '1',
+        shelf: '2',
+        level: '3',
+        image_url: 'https://example.com/image.jpg'
+      };
+
+      const mockResponse = {
+        success: true,
+        product_id: 4,
+        message: 'Producto insertado exitosamente'
+      };
+
+      service.insertProduct(newProduct).subscribe({
+        next: (response) => {
+          expect(response.success).toBe(true);
+          expect(response.product_id).toBe(4);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/insert`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(newProduct);
+      req.flush(mockResponse);
+    });
+
+    it('should insert product without location data', (done) => {
+      const newProduct = {
+        sku: 'MED-005',
+        name: 'Producto 5',
+        value: 5000,
+        category_name: 'Equipos',
+        quantity: 50,
+        warehouse_id: 1
+      };
+
+      const mockResponse = {
+        success: true,
+        product_id: 5
+      };
+
+      service.insertProduct(newProduct).subscribe({
+        next: (response) => {
+          expect(response.success).toBe(true);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/insert`);
+      req.flush(mockResponse);
+    });
+
+    it('should handle error when inserting product', (done) => {
+      const newProduct = {
+        sku: 'DUPLICATE-SKU',
+        name: 'Producto Duplicado',
+        value: 1000,
+        category_name: 'Medicamentos',
+        quantity: 10,
+        warehouse_id: 1
+      };
+
+      service.insertProduct(newProduct).subscribe({
+        next: () => fail('Should have failed'),
+        error: (error) => {
+          expect(error).toBeTruthy();
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/insert`);
+      req.error(new ErrorEvent('Validation error'), { status: 400 });
+    });
+
+    it('should insert product with all location fields', (done) => {
+      const newProduct = {
+        sku: 'MED-006',
+        name: 'Producto 6',
+        value: 6000,
+        category_name: 'Dispositivos',
+        quantity: 100,
+        warehouse_id: 2,
+        section: 'B',
+        aisle: '5',
+        shelf: '10',
+        level: '15'
+      };
+
+      const mockResponse = {
+        success: true,
+        product_id: 6
+      };
+
+      service.insertProduct(newProduct).subscribe({
+        next: (response) => {
+          expect(response.success).toBe(true);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/insert`);
+      req.flush(mockResponse);
+    });
+  });
 });
 

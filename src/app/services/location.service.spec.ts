@@ -54,7 +54,7 @@ describe('LocationService', () => {
         }
       });
 
-      const req = httpMock.expectOne(`${baseUrl}cities`);
+      const req = httpMock.expectOne(`${baseUrl}products/cities`);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
@@ -68,7 +68,7 @@ describe('LocationService', () => {
         }
       });
 
-      const req = httpMock.expectOne(`${baseUrl}cities`);
+      const req = httpMock.expectOne(`${baseUrl}products/cities`);
       req.error(new ErrorEvent('Network error'));
     });
 
@@ -86,7 +86,7 @@ describe('LocationService', () => {
         }
       });
 
-      const req = httpMock.expectOne(`${baseUrl}cities`);
+      const req = httpMock.expectOne(`${baseUrl}products/cities`);
       req.flush(mockResponse);
     });
   });
@@ -115,7 +115,7 @@ describe('LocationService', () => {
         }
       });
 
-      const req = httpMock.expectOne(`${baseUrl}warehouses/by-city/1`);
+      const req = httpMock.expectOne(`${baseUrl}products/warehouses/by-city/1`);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
@@ -145,7 +145,7 @@ describe('LocationService', () => {
         }
       });
 
-      const req = httpMock.expectOne(`${baseUrl}warehouses`);
+      const req = httpMock.expectOne(`${baseUrl}products/warehouses`);
       req.flush(mockResponse);
     });
 
@@ -158,7 +158,7 @@ describe('LocationService', () => {
         }
       });
 
-      const req = httpMock.expectOne(`${baseUrl}warehouses/by-city/1`);
+      const req = httpMock.expectOne(`${baseUrl}products/warehouses/by-city/1`);
       req.error(new ErrorEvent('Network error'));
     });
   });
@@ -201,7 +201,7 @@ describe('LocationService', () => {
         }
       });
 
-      const req = httpMock.expectOne(`${baseUrl}/products/location`);
+      const req = httpMock.expectOne(`${baseUrl}products/location`);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
@@ -215,7 +215,7 @@ describe('LocationService', () => {
         }
       });
 
-      const req = httpMock.expectOne(`${baseUrl}/products/location`);
+      const req = httpMock.expectOne(`${baseUrl}products/location`);
       req.error(new ErrorEvent('Network error'));
     });
   });
@@ -366,6 +366,248 @@ describe('LocationService', () => {
       });
 
       const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1`);
+      req.flush(mockResponse);
+    });
+
+    it('should handle array response format', (done) => {
+      const mockProducts = [
+        {
+          product_id: 1,
+          sku: 'MED-001',
+          name: 'Producto 1',
+          quantity: 50
+        },
+        {
+          product_id: 2,
+          sku: 'MED-002',
+          name: 'Producto 2',
+          quantity: 30
+        }
+      ];
+
+      service.getProductsByWarehouse(1).subscribe({
+        next: (response: WarehouseProductsResponse) => {
+          expect(response.products.length).toBe(2);
+          expect(response.warehouse_id).toBe(1);
+          expect(response.success).toBe(true);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1`);
+      req.flush(mockProducts);
+    });
+
+    it('should handle response wrapped in body property', (done) => {
+      const mockResponse = {
+        body: {
+          products: [
+            {
+              product_id: 1,
+              sku: 'MED-001',
+              name: 'Producto 1',
+              quantity: 50
+            }
+          ],
+          success: true,
+          warehouse_id: 1
+        }
+      };
+
+      service.getProductsByWarehouse(1).subscribe({
+        next: (response: WarehouseProductsResponse) => {
+          expect(response.products.length).toBe(1);
+          expect(response.success).toBe(true);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1`);
+      req.flush(mockResponse);
+    });
+
+    it('should handle response wrapped in data property', (done) => {
+      const mockResponse = {
+        data: {
+          products: [
+            {
+              product_id: 1,
+              sku: 'MED-001',
+              name: 'Producto 1',
+              quantity: 50
+            }
+          ],
+          success: true,
+          warehouse_id: 1
+        }
+      };
+
+      service.getProductsByWarehouse(1).subscribe({
+        next: (response: WarehouseProductsResponse) => {
+          expect(response.products.length).toBe(1);
+          expect(response.success).toBe(true);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1`);
+      req.flush(mockResponse);
+    });
+
+    it('should handle response with Items property (Lambda format)', (done) => {
+      const mockResponse = {
+        Items: [
+          {
+            product_id: 1,
+            sku: 'MED-001',
+            name: 'Producto 1',
+            quantity: 50
+          }
+        ]
+      };
+
+      service.getProductsByWarehouse(1).subscribe({
+        next: (response: WarehouseProductsResponse) => {
+          expect(response.products.length).toBe(1);
+          expect(response.warehouse_id).toBe(1);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1`);
+      req.flush(mockResponse);
+    });
+
+    it('should handle invalid response format', (done) => {
+      const mockResponse = {
+        invalid: 'format'
+      };
+
+      service.getProductsByWarehouse(1).subscribe({
+        next: (response: WarehouseProductsResponse) => {
+          expect(response.success).toBe(false);
+          expect(response.products.length).toBe(0);
+          expect(response.warehouse_id).toBe(1);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1`);
+      req.flush(mockResponse);
+    });
+
+    it('should handle products with locations array', (done) => {
+      const mockResponse: WarehouseProductsResponse = {
+        products: [
+          {
+            product_id: 1,
+            sku: 'MED-001',
+            name: 'Producto 1',
+            quantity: 50,
+            locations: [
+              {
+                section: 'A',
+                aisle: '1',
+                shelf: '2',
+                level: '3',
+                lot: 'LOT001',
+                expires: '2025-12-31',
+                available: 50,
+                reserved: 0
+              }
+            ]
+          }
+        ],
+        success: true,
+        warehouse_id: 1
+      };
+
+      service.getProductsByWarehouse(1, false, true).subscribe({
+        next: (response: WarehouseProductsResponse) => {
+          expect(response.products.length).toBe(1);
+          expect(response.products[0].locations).toBeDefined();
+          expect(response.products[0].locations?.length).toBe(1);
+          expect(response.products[0].locations?.[0].section).toBe('A');
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1?include_locations=true`);
+      req.flush(mockResponse);
+    });
+
+
+    it('should handle string response and parse JSON', (done) => {
+      const mockResponseString = JSON.stringify({
+        products: [
+          {
+            product_id: 1,
+            sku: 'MED-001',
+            name: 'Producto 1',
+            quantity: 50
+          }
+        ],
+        success: true,
+        warehouse_id: 1
+      });
+
+      service.getProductsByWarehouse(1).subscribe({
+        next: (response: WarehouseProductsResponse) => {
+          expect(response.products.length).toBe(1);
+          expect(response.success).toBe(true);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1`);
+      req.flush(mockResponseString);
+    });
+
+    it('should handle network error with 404 status', (done) => {
+      service.getProductsByWarehouse(999).subscribe({
+        next: () => fail('Should have failed'),
+        error: (error) => {
+          expect(error).toBeTruthy();
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/999`);
+      req.error(new ErrorEvent('Not found'), { status: 404, statusText: 'Not Found' });
+    });
+
+    it('should handle network error with 0 status', (done) => {
+      service.getProductsByWarehouse(1).subscribe({
+        next: () => fail('Should have failed'),
+        error: (error) => {
+          expect(error).toBeTruthy();
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1`);
+      req.error(new ErrorEvent('Network error'), { status: 0 });
+    });
+
+    it('should correctly construct URL with both parameters', (done) => {
+      const mockResponse: WarehouseProductsResponse = {
+        products: [],
+        success: true,
+        warehouse_id: 1
+      };
+
+      service.getProductsByWarehouse(1, true, true).subscribe({
+        next: (response: WarehouseProductsResponse) => {
+          expect(response).toBeTruthy();
+          expect(response.products.length).toBe(0);
+          expect(response.success).toBe(true);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1?include_zero=true&include_locations=true`);
+      expect(req.request.url).toContain('include_zero=true');
+      expect(req.request.url).toContain('include_locations=true');
       req.flush(mockResponse);
     });
   });
