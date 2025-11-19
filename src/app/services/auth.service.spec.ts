@@ -129,7 +129,14 @@ describe('AuthService', () => {
 
       const responseWithId: LoginResponse = {
         ...mockLoginResponse,
-        user: { ...mockLoginResponse.user, identification: '123456789' }
+        user: {
+          user_id: 1,
+          name: 'John',
+          last_name: 'Doe',
+          email: 'john.doe@example.com',
+          role: 'ADMIN',
+          identification: '123456789'
+        }
       };
 
       service.login(credentials).subscribe({
@@ -148,7 +155,14 @@ describe('AuthService', () => {
     it('should map role correctly during login', (done) => {
       const sellerResponse: LoginResponse = {
         ...mockLoginResponse,
-        user: { ...mockLoginResponse.user!, role: 'SELLER' }
+        user: {
+          user_id: 1,
+          name: 'John',
+          last_name: 'Doe',
+          email: 'john.doe@example.com',
+          role: 'SELLER',
+          identification: '123456789'
+        }
       };
 
       service.login({ correo: 'test@example.com', contraseña: 'pass' }).subscribe({
