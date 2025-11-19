@@ -5,18 +5,17 @@ import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/materia
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
-import { SellerTemplate } from '../../../services/seller-validation.service';
+import { ProviderTemplate } from '../../../services/provider-validation.service';
 import { validatePassword } from '../../../utils/password-validator';
 import { isValidEmail } from '../../../utils/email-validator';
 
-export interface AddSellerDialogData {
-  zones?: string[]; // Zonas disponibles (opcional)
+export interface AddProviderDialogData {
+  // No hay datos adicionales necesarios por ahora
 }
 
 @Component({
-  selector: 'app-add-seller-dialog',
+  selector: 'app-add-provider-dialog',
   standalone: true,
   imports: [
     CommonModule,
@@ -25,157 +24,144 @@ export interface AddSellerDialogData {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     TranslatePipe
   ],
   template: `
     <div class="add-dialog">
-      <h2 mat-dialog-title>{{ 'addSellerDialogTitle' | translate }}</h2>
+      <h2 mat-dialog-title>{{ 'addProviderDialogTitle' | translate }}</h2>
       
       <mat-dialog-content>
-        <form #sellerForm="ngForm" class="seller-form">
+        <form #providerForm="ngForm" class="provider-form">
           <div class="form-row">
             <mat-form-field appearance="outline" class="half-width">
-              <mat-label>{{ 'addSellerFirstNameLabel' | translate }}</mat-label>
+              <mat-label>{{ 'addProviderFirstNameLabel' | translate }}</mat-label>
               <input 
                 matInput 
-                [(ngModel)]="newSeller.nombre" 
+                [(ngModel)]="newProvider.nombre" 
                 name="nombre"
                 required
-                [placeholder]="'addSellerFirstNamePlaceholder' | translate"
+                [placeholder]="'addProviderFirstNamePlaceholder' | translate"
                 #nombreInput="ngModel">
               <mat-error *ngIf="nombreInput.invalid && nombreInput.touched">
-                {{ 'addSellerFirstNameRequired' | translate }}
+                {{ 'addProviderFirstNameRequired' | translate }}
               </mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="half-width">
-              <mat-label>{{ 'addSellerLastNameLabel' | translate }}</mat-label>
+              <mat-label>{{ 'addProviderLastNameLabel' | translate }}</mat-label>
               <input 
                 matInput 
-                [(ngModel)]="newSeller.apellido" 
+                [(ngModel)]="newProvider.apellido" 
                 name="apellido"
                 required
-                [placeholder]="'addSellerLastNamePlaceholder' | translate"
+                [placeholder]="'addProviderLastNamePlaceholder' | translate"
                 #apellidoInput="ngModel">
               <mat-error *ngIf="apellidoInput.invalid && apellidoInput.touched">
-                {{ 'addSellerLastNameRequired' | translate }}
+                {{ 'addProviderLastNameRequired' | translate }}
               </mat-error>
             </mat-form-field>
           </div>
 
           <mat-form-field appearance="outline" class="full-width" [class.mat-form-field-invalid]="(correoInput.invalid && correoInput.touched) || emailError">
-            <mat-label>{{ 'addSellerEmailLabel' | translate }}</mat-label>
+            <mat-label>{{ 'addProviderEmailLabel' | translate }}</mat-label>
             <input 
               matInput 
               type="email"
-              [(ngModel)]="newSeller.correo" 
+              [(ngModel)]="newProvider.correo" 
               name="correo"
               required
-              [placeholder]="'addSellerEmailPlaceholder' | translate"
+              [placeholder]="'addProviderEmailPlaceholder' | translate"
               (blur)="validateEmailField()"
               (input)="onEmailInput()"
               #correoInput="ngModel">
             <mat-error *ngIf="correoInput.errors?.['required'] && correoInput.touched">
-              {{ 'addSellerEmailRequired' | translate }}
+              {{ 'addProviderEmailRequired' | translate }}
             </mat-error>
             <mat-error *ngIf="emailError && correoInput.touched && !correoInput.errors?.['required']">
-              {{ 'addSellerEmailInvalid' | translate }}
+              {{ 'addProviderEmailInvalid' | translate }}
             </mat-error>
           </mat-form-field>
 
           <div class="form-row">
             <mat-form-field appearance="outline" class="half-width">
-              <mat-label>{{ 'addSellerIdentificationLabel' | translate }}</mat-label>
+              <mat-label>{{ 'addProviderIdentificationLabel' | translate }}</mat-label>
               <input 
                 matInput 
-                [(ngModel)]="newSeller.identificacion" 
+                [(ngModel)]="newProvider.identificacion" 
                 name="identificacion"
                 required
-                [placeholder]="'addSellerIdentificationPlaceholder' | translate"
+                [placeholder]="'addProviderIdentificationPlaceholder' | translate"
                 #identificacionInput="ngModel">
               <mat-error *ngIf="identificacionInput.invalid && identificacionInput.touched">
-                {{ 'addSellerIdentificationRequired' | translate }}
+                {{ 'addProviderIdentificationRequired' | translate }}
               </mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="half-width">
-              <mat-label>{{ 'addSellerPhoneLabel' | translate }}</mat-label>
+              <mat-label>{{ 'addProviderPhoneLabel' | translate }}</mat-label>
               <input 
                 matInput 
                 type="tel"
-                [(ngModel)]="newSeller.telefono" 
+                [(ngModel)]="newProvider.telefono" 
                 name="telefono"
                 required
-                [placeholder]="'addSellerPhonePlaceholder' | translate"
+                [placeholder]="'addProviderPhonePlaceholder' | translate"
                 #telefonoInput="ngModel">
               <mat-error *ngIf="telefonoInput.invalid && telefonoInput.touched">
-                {{ 'addSellerPhoneRequired' | translate }}
+                {{ 'addProviderPhoneRequired' | translate }}
               </mat-error>
             </mat-form-field>
           </div>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>{{ 'addSellerZoneLabel' | translate }}</mat-label>
-            <mat-select 
-              [(ngModel)]="newSeller.zona" 
-              name="zona"
+            <mat-label>{{ 'addProviderCompanyNameLabel' | translate }}</mat-label>
+            <input 
+              matInput 
+              [(ngModel)]="newProvider.nombre_empresa" 
+              name="nombre_empresa"
               required
-              [placeholder]="'addSellerZonePlaceholder' | translate"
-              #zonaInput="ngModel">
-              <ng-container *ngIf="data.zones && data.zones.length > 0">
-                <mat-option *ngFor="let zone of data.zones" [value]="zone">
-                  {{ zone }}
-                </mat-option>
-              </ng-container>
-              <ng-container *ngIf="!data.zones || data.zones.length === 0">
-                <mat-option value="Norte">Norte</mat-option>
-                <mat-option value="Sur">Sur</mat-option>
-                <mat-option value="Centro">Centro</mat-option>
-                <mat-option value="Oriente">Oriente</mat-option>
-                <mat-option value="Occidente">Occidente</mat-option>
-              </ng-container>
-            </mat-select>
-            <mat-error *ngIf="zonaInput.invalid && zonaInput.touched">
-              {{ 'addSellerZoneRequired' | translate }}
+              [placeholder]="'addProviderCompanyNamePlaceholder' | translate"
+              #companyInput="ngModel">
+            <mat-error *ngIf="companyInput.invalid && companyInput.touched">
+              {{ 'addProviderCompanyNameRequired' | translate }}
             </mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="full-width" [class.mat-form-field-invalid]="passwordErrors.length > 0 || (passwordInput.invalid && passwordInput.touched)">
-            <mat-label>{{ 'addSellerPasswordLabel' | translate }}</mat-label>
+            <mat-label>{{ 'addProviderPasswordLabel' | translate }}</mat-label>
             <input 
               matInput 
               type="password"
               [(ngModel)]="password" 
               name="password"
               required
-              [placeholder]="'addSellerPasswordPlaceholder' | translate"
+              [placeholder]="'addProviderPasswordPlaceholder' | translate"
               (blur)="validatePasswordField()"
               (input)="onPasswordInput()"
               #passwordInput="ngModel">
             <mat-error *ngIf="passwordInput.invalid && passwordInput.touched && !passwordErrors.length">
-              {{ 'addSellerPasswordRequired' | translate }}
+              {{ 'addProviderPasswordRequired' | translate }}
             </mat-error>
             <mat-error *ngIf="passwordErrors.length > 0">
               <div *ngFor="let error of passwordErrors">
                 {{ error | translate }}
               </div>
             </mat-error>
-            <mat-hint>{{ 'passwordHint' | translate }}</mat-hint>
+            <mat-hint *ngIf="shouldShowPasswordHint()">{{ 'passwordHint' | translate }}</mat-hint>
           </mat-form-field>
         </form>
       </mat-dialog-content>
       
       <mat-dialog-actions align="end">
         <button mat-button (click)="onCancel()">
-          {{ 'addSellerCancelButton' | translate }}
+          {{ 'addProviderCancelButton' | translate }}
         </button>
         <button 
           mat-flat-button 
           color="primary"
-          [disabled]="!sellerForm.form.valid"
+          [disabled]="!providerForm.form.valid"
           (click)="onSave()">
-          {{ 'addSellerCreateButton' | translate }}
+          {{ 'addProviderCreateButton' | translate }}
         </button>
       </mat-dialog-actions>
     </div>
@@ -201,7 +187,7 @@ export interface AddSellerDialogData {
       overflow-y: auto;
     }
     
-    .seller-form {
+    .provider-form {
       display: flex;
       flex-direction: column;
       gap: 20px;
@@ -251,10 +237,6 @@ export interface AddSellerDialogData {
       font-size: 14px;
     }
     
-    mat-select {
-      font-size: 14px;
-    }
-    
     .mat-mdc-form-field-error {
       font-size: 12px;
     }
@@ -288,18 +270,18 @@ export interface AddSellerDialogData {
     }
   `]
 })
-export class AddSellerDialog {
-  @ViewChild('sellerForm') sellerForm!: NgForm;
+export class AddProviderDialog {
+  @ViewChild('providerForm') providerForm!: NgForm;
   @ViewChild('passwordInput') passwordInput!: NgModel;
   @ViewChild('correoInput') correoInput!: NgModel;
 
-  newSeller: SellerTemplate = {
+  newProvider: ProviderTemplate = {
     nombre: '',
     apellido: '',
     correo: '',
     identificacion: '',
     telefono: '',
-    zona: '',
+    nombre_empresa: '',
     contraseña: ''
   };
 
@@ -308,11 +290,11 @@ export class AddSellerDialog {
 
   // Propiedad temporal para el binding de contraseña (para evitar problemas con caracteres especiales)
   get password(): string {
-    return this.newSeller.contraseña;
+    return this.newProvider.contraseña;
   }
 
   set password(value: string) {
-    this.newSeller.contraseña = value;
+    this.newProvider.contraseña = value;
     // Limpiar errores cuando el usuario está escribiendo
     if (this.passwordErrors.length > 0) {
       this.validatePasswordField();
@@ -320,8 +302,8 @@ export class AddSellerDialog {
   }
 
   constructor(
-    public dialogRef: MatDialogRef<AddSellerDialog>,
-    @Inject(MAT_DIALOG_DATA) public data: AddSellerDialogData
+    public dialogRef: MatDialogRef<AddProviderDialog>,
+    @Inject(MAT_DIALOG_DATA) public data: AddProviderDialogData
   ) {}
 
   onCancel(): void {
@@ -368,7 +350,7 @@ export class AddSellerDialog {
   }
 
   validatePasswordField(): void {
-    const validation = validatePassword(this.newSeller.contraseña);
+    const validation = validatePassword(this.newProvider.contraseña);
     this.passwordErrors = validation.errors;
     
     // Marcar el control como touched para activar el estado de error visual
@@ -379,17 +361,28 @@ export class AddSellerDialog {
     // Marcar como inválido si hay errores
     if (this.passwordInput && validation.errors.length > 0) {
       this.passwordInput.control.setErrors({ 'passwordInvalid': true });
-    } else if (this.passwordInput && this.newSeller.contraseña) {
+    } else if (this.passwordInput && this.newProvider.contraseña) {
       // Limpiar errores si la contraseña es válida
       this.passwordInput.control.setErrors(null);
     }
   }
 
+  shouldShowPasswordHint(): boolean {
+    // No mostrar hint si no hay contraseña (campo vacío)
+    if (!this.newProvider.contraseña || this.newProvider.contraseña.trim().length === 0) {
+      return true; // Mostrar hint cuando está vacío
+    }
+    // Si hay contraseña, validar y mostrar hint solo si hay errores
+    // NO mostrar hint cuando la contraseña es válida
+    const validation = validatePassword(this.newProvider.contraseña);
+    return validation.errors.length > 0; // Solo mostrar si hay errores
+  }
+
   onSave(): void {
     // Marcar todos los campos como touched para mostrar errores
-    if (this.sellerForm) {
-      Object.keys(this.sellerForm.controls).forEach(key => {
-        this.sellerForm.controls[key].markAsTouched();
+    if (this.providerForm) {
+      Object.keys(this.providerForm.controls).forEach(key => {
+        this.providerForm.controls[key].markAsTouched();
       });
     }
 
@@ -403,7 +396,7 @@ export class AddSellerDialog {
     }
 
     // Validar contraseña antes de guardar
-    const passwordValidation = validatePassword(this.newSeller.contraseña);
+    const passwordValidation = validatePassword(this.newProvider.contraseña);
     if (!passwordValidation.isValid) {
       this.passwordErrors = passwordValidation.errors;
       if (this.passwordInput) {
@@ -413,10 +406,10 @@ export class AddSellerDialog {
       return; // No cerrar el diálogo si la contraseña es inválida
     }
 
-    if (this.newSeller.nombre && this.newSeller.apellido && 
-        this.newSeller.correo && this.newSeller.identificacion &&
-        this.newSeller.telefono && this.newSeller.zona && this.newSeller.contraseña) {
-      this.dialogRef.close(this.newSeller);
+    if (this.newProvider.nombre && this.newProvider.apellido && 
+        this.newProvider.correo && this.newProvider.identificacion &&
+        this.newProvider.telefono && this.newProvider.nombre_empresa && this.newProvider.contraseña) {
+      this.dialogRef.close(this.newProvider);
     }
   }
 }
