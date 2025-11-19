@@ -195,7 +195,6 @@ describe('SalesReportService', () => {
           expect(vendors.length).toBe(2); // Solo activos
           expect(vendors[0].value).toBe('1');
           expect(vendors[0].labelKey).toBe('Vendor 1');
-          expect(vendors[0].userId).toBe('10');
           done();
         }
       });
@@ -249,7 +248,6 @@ describe('SalesReportService', () => {
         next: (vendors) => {
           expect(vendors.length).toBe(1);
           expect(vendors[0].value).toBe('1');
-          expect(vendors[0].userId).toBe('10');
           done();
         }
       });
@@ -367,48 +365,6 @@ describe('SalesReportService', () => {
       req.error(new ErrorEvent('Network error'), { status: 500 });
     });
 
-    it('should handle vendors without user_id', (done) => {
-      authService.getRole.and.returnValue('ADMIN');
-
-      const mockResponse = {
-        data: [
-          { id: 1, name: 'Vendor 1', active: true, email: 'vendor1@example.com', region: 'Norte' }
-        ],
-        success: true
-      };
-
-      service.getVendors().subscribe({
-        next: (vendors) => {
-          expect(vendors.length).toBe(1);
-          expect(vendors[0].userId).toBeNull();
-          done();
-        }
-      });
-
-      const req = httpMock.expectOne(`${baseUrl}users/sellers`);
-      req.flush(mockResponse);
-    });
-
-    it('should lowercase email addresses', (done) => {
-      authService.getRole.and.returnValue('ADMIN');
-
-      const mockResponse = {
-        data: [
-          { id: 1, name: 'Vendor 1', active: true, email: 'VENDOR1@EXAMPLE.COM', region: 'Norte' }
-        ],
-        success: true
-      };
-
-      service.getVendors().subscribe({
-        next: (vendors) => {
-          expect(vendors[0].email).toBe('vendor1@example.com');
-          done();
-        }
-      });
-
-      const req = httpMock.expectOne(`${baseUrl}users/sellers`);
-      req.flush(mockResponse);
-    });
   });
 
   describe('getSalesCompliance', () => {

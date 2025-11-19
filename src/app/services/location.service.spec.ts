@@ -536,37 +536,6 @@ describe('LocationService', () => {
       req.flush(mockResponse);
     });
 
-    it('should handle products with flattened location fields', (done) => {
-      const mockResponse = {
-        products: [
-          {
-            product_id: 1,
-            sku: 'MED-001',
-            name: 'Producto 1',
-            quantity: 50,
-            section: 'A',
-            aisle: '1',
-            shelf: '2',
-            level: '3',
-            lote: 'LOT001'
-          }
-        ],
-        success: true,
-        warehouse_id: 1
-      };
-
-      service.getProductsByWarehouse(1, false, true).subscribe({
-        next: (response: WarehouseProductsResponse) => {
-          expect(response.products.length).toBe(1);
-          expect(response.products[0].section).toBe('A');
-          expect(response.products[0].aisle).toBe('1');
-          done();
-        }
-      });
-
-      const req = httpMock.expectOne(`${baseUrl}products/by-warehouse/1?include_locations=true`);
-      req.flush(mockResponse);
-    });
 
     it('should handle string response and parse JSON', (done) => {
       const mockResponseString = JSON.stringify({

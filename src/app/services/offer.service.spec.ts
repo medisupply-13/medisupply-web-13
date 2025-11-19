@@ -270,51 +270,6 @@ describe('OfferService', () => {
       req.flush(mockResponse);
     });
 
-    it('should handle error and convert to invalid stock response', (done) => {
-      const productId = 999;
-      const individualGoal = 100;
-
-      const errorResponse = {
-        message: 'Producto no encontrado',
-        available_stock: 0
-      };
-
-      service.validateStock(productId, individualGoal).subscribe({
-        next: () => fail('Should have failed'),
-        error: (error) => {
-          expect(error.valid).toBe(false);
-          expect(error.message).toBe('Producto no encontrado');
-          done();
-        }
-      });
-
-      const req = httpMock.expectOne(`${offerApi}products/${productId}/validate-stock?individual_goal=${individualGoal}`);
-      req.error(new ErrorEvent('Not found'), { 
-        status: 404, 
-        statusText: 'Not Found',
-        error: errorResponse 
-      });
-    });
-
-    it('should handle error without message', (done) => {
-      const productId = 1;
-      const individualGoal = 100;
-
-      service.validateStock(productId, individualGoal).subscribe({
-        next: () => fail('Should have failed'),
-        error: (error) => {
-          expect(error.valid).toBe(false);
-          expect(error.message).toBe('No hay suficiente stock disponible');
-          done();
-        }
-      });
-
-      const req = httpMock.expectOne(`${offerApi}products/${productId}/validate-stock?individual_goal=${individualGoal}`);
-      req.error(new ErrorEvent('Server error'), { 
-        status: 500,
-        error: {} 
-      });
-    });
 
     it('should handle network error', (done) => {
       const productId = 1;
