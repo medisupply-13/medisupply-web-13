@@ -660,7 +660,7 @@ describe('FileValidationService', () => {
   describe('validateSingleProduct', () => {
     beforeEach(() => {
       // Reset fetch mock
-      (global as any).fetch = jasmine.createSpy('fetch');
+      (window as any).fetch = jasmine.createSpy('fetch');
     });
 
     it('should validate single product successfully', async () => {
@@ -679,7 +679,7 @@ describe('FileValidationService', () => {
         validated_products: [product]
       };
 
-      (global as any).fetch.and.returnValue(
+      (window as any).fetch.and.returnValue(
         Promise.resolve({
           ok: true,
           status: 200,
@@ -711,7 +711,7 @@ describe('FileValidationService', () => {
         validated_products: []
       };
 
-      (global as any).fetch.and.returnValue(
+      (window as any).fetch.and.returnValue(
         Promise.resolve({
           ok: true,
           status: 200,
@@ -741,7 +741,7 @@ describe('FileValidationService', () => {
         validated_products: [product]
       };
 
-      (global as any).fetch.and.returnValue(
+      (window as any).fetch.and.returnValue(
         Promise.resolve({
           ok: true,
           status: 200,
@@ -765,7 +765,7 @@ describe('FileValidationService', () => {
         warehouse_id: 1
       };
 
-      (global as any).fetch.and.returnValue(
+      (window as any).fetch.and.returnValue(
         Promise.resolve({
           ok: false,
           status: 400,
@@ -792,7 +792,7 @@ describe('FileValidationService', () => {
         warehouse_id: 1
       };
 
-      (global as any).fetch.and.returnValue(Promise.reject(new Error('Network error')));
+      (window as any).fetch.and.returnValue(Promise.reject(new Error('Network error')));
 
       const result = await service.validateSingleProduct(product);
 
