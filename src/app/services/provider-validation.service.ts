@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { isValidEmail } from '../utils/email-validator';
+import { validatePassword } from '../utils/password-validator';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -669,7 +671,7 @@ export class ProviderValidationService {
     const correoIndex = getHeaderIndex('correo', ['correo', 'email']);
     if (correoIndex !== undefined) {
       const email = rowData[correoIndex]?.trim();
-      if (email && !this.isValidEmail(email)) {
+      if (email && !isValidEmail(email)) {
         errors.push(`Fila ${rowNum}: El correo "${email}" no es válido`);
       }
     }
@@ -680,8 +682,29 @@ export class ProviderValidationService {
       const password = rowData[passwordIndex]?.trim();
       if (!password || password === '') {
         errors.push(`Fila ${rowNum}: contraseña es obligatorio`);
-      } else if (!this.isValidPassword(password)) {
-        errors.push(`Fila ${rowNum}: La contraseña debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y carácter especial`);
+      } else {
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+          // Construir mensaje de error específico con los requisitos faltantes
+          const missingRequirements = passwordValidation.errors.map(err => {
+            switch(err) {
+              case 'passwordMinLength':
+                return 'mínimo 8 caracteres';
+              case 'passwordUppercase':
+                return 'mayúscula (A-Z)';
+              case 'passwordLowercase':
+                return 'minúscula (a-z)';
+              case 'passwordNumber':
+                return 'número (0-9)';
+              case 'passwordSpecialChar':
+                return 'carácter especial (!@#$%^&*()_+-=[]{}|;:,.<>?)';
+              default:
+                return '';
+            }
+          }).filter(req => req !== '').join(', ');
+          
+          errors.push(`Fila ${rowNum}: La contraseña debe tener ${missingRequirements}`);
+        }
       }
     }
 
@@ -814,30 +837,5 @@ export class ProviderValidationService {
     return { correo: duplicateCorreos, identificacion: duplicateIdentificaciones };
   }
 
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
-
-  /**
-   * Valida que la contraseña cumpla con los requisitos:
-   * - Mínimo 8 caracteres
-   * - Al menos una mayúscula
-   * - Al menos una minúscula
-   * - Al menos un número
-   * - Al menos un carácter especial
-   */
-  private isValidPassword(password: string): boolean {
-    if (password.length < 8) {
-      return false;
-    }
-    
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-    
-    return hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
-  }
 }
 

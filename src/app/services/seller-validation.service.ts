@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { isValidEmail } from '../utils/email-validator';
+import { validatePassword } from '../utils/password-validator';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -608,17 +610,40 @@ export class SellerValidationService {
     const correoIndex = getHeaderIndex('correo', ['correo', 'email']);
     if (correoIndex !== undefined) {
       const email = rowData[correoIndex]?.trim();
-      if (email && !this.isValidEmail(email)) {
+      if (email && !isValidEmail(email)) {
         errors.push(`Fila ${rowNum}: El correo "${email}" no es válido`);
       }
     }
 
-    // Validar que la contraseña existe
+    // Validar contraseña (mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial)
     const passwordIndex = getHeaderIndex('contraseña', ['contraseña', 'contrasea', 'contrasena', 'password']);
     if (passwordIndex !== undefined) {
       const password = rowData[passwordIndex]?.trim();
       if (!password || password === '') {
         errors.push(`Fila ${rowNum}: contraseña es obligatorio`);
+      } else {
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+          // Construir mensaje de error específico con los requisitos faltantes
+          const missingRequirements = passwordValidation.errors.map(err => {
+            switch(err) {
+              case 'passwordMinLength':
+                return 'mínimo 8 caracteres';
+              case 'passwordUppercase':
+                return 'mayúscula (A-Z)';
+              case 'passwordLowercase':
+                return 'minúscula (a-z)';
+              case 'passwordNumber':
+                return 'número (0-9)';
+              case 'passwordSpecialChar':
+                return 'carácter especial (!@#$%^&*()_+-=[]{}|;:,.<>?)';
+              default:
+                return '';
+            }
+          }).filter(req => req !== '').join(', ');
+          
+          errors.push(`Fila ${rowNum}: La contraseña debe tener ${missingRequirements}`);
+        }
       }
     }
 
@@ -751,9 +776,5 @@ export class SellerValidationService {
     return { correo: duplicateCorreos, identificacion: duplicateIdentificaciones };
   }
 
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
 }
 
