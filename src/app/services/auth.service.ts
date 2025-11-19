@@ -57,7 +57,7 @@ export class AuthService {
   // Timer de inactividad (10 minutos = 600000 ms)
   private inactivityTimer: any = null;
   private readonly INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutos en milisegundos
-  private activityListeners: (() => void)[] = [];
+  private activityListeners: Array<{ event: string; handler: EventListener; remove: () => void }> = [];
 
   constructor(
     private http: HttpClient,
@@ -286,13 +286,14 @@ export class AuthService {
   }
 
   /**
-   * Inicia el timer de inactividad que cerrará la sesión después de 5 minutos
+   * Inicia el timer de inactividad que cerrará la sesión después del tiempo configurado
    */
   private startInactivityTimer(): void {
     // Detener el timer anterior si existe
     this.stopInactivityTimer();
 
-    console.log('⏱️ AuthService: Iniciando timer de inactividad (5 minutos)');
+    const timeoutMinutes = this.INACTIVITY_TIMEOUT / (60 * 1000);
+    console.log(`⏱️ AuthService: Iniciando timer de inactividad (${timeoutMinutes} minuto${timeoutMinutes > 1 ? 's' : ''})`);
 
     // Configurar el timer
     this.resetInactivityTimer();
@@ -324,8 +325,15 @@ export class AuthService {
     }
 
     this.inactivityTimer = setTimeout(() => {
-      console.warn('⏱️ AuthService: Tiempo de inactividad agotado (10 minutos)');
+      const timeoutMinutes = this.INACTIVITY_TIMEOUT / (60 * 1000);
+      console.warn(`⏱️ AuthService: Tiempo de inactividad agotado (${timeoutMinutes} minuto${timeoutMinutes > 1 ? 's' : ''})`);
       console.warn('🔒 AuthService: Cerrando sesión automáticamente...');
+      
+      // Verificar que el usuario aún esté autenticado antes de cerrar sesión
+      if (!this.isLoggedIn()) {
+        console.log('ℹ️ AuthService: Usuario ya no está autenticado, no es necesario cerrar sesión');
+        return;
+      }
       
       // Cerrar sesión automáticamente
       this.logout().subscribe({
@@ -340,7 +348,8 @@ export class AuthService {
         },
         error: (error) => {
           console.error('❌ AuthService: Error al cerrar sesión automáticamente:', error);
-          // Aun así, redirigir al login
+          // Aun así, limpiar la sesión local y redirigir al login
+          this.clearSession();
           this.router.navigate(['/login'], { 
             queryParams: { 
               reason: 'inactivity',
@@ -356,32 +365,50 @@ export class AuthService {
    * Configura los listeners para detectar actividad del usuario
    */
   private setupActivityListeners(): void {
+    // Remover listeners anteriores si existen
+    this.removeActivityListeners();
+
     // Eventos que indican actividad del usuario
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
 
     events.forEach(event => {
-      const handler = () => {
+      const handler: EventListener = () => {
         if (this.isLoggedIn()) {
+          console.log(`👆 AuthService: Actividad detectada (${event}), reiniciando timer...`);
           this.resetInactivityTimer();
         }
       };
 
       document.addEventListener(event, handler, { passive: true });
-      this.activityListeners.push(() => {
-        document.removeEventListener(event, handler);
+      
+      // Guardar referencia para poder removerlo correctamente
+      this.activityListeners.push({
+        event,
+        handler,
+        remove: () => {
+          document.removeEventListener(event, handler);
+        }
       });
     });
 
-    console.log('👂 AuthService: Listeners de actividad configurados');
+    console.log(`👂 AuthService: ${events.length} listeners de actividad configurados`);
   }
 
   /**
    * Remueve los listeners de actividad
    */
   private removeActivityListeners(): void {
-    this.activityListeners.forEach(remove => remove());
+    if (this.activityListeners.length > 0) {
+      this.activityListeners.forEach(listener => {
+        try {
+          listener.remove();
+        } catch (error) {
+          console.warn(`⚠️ AuthService: Error al remover listener para ${listener.event}:`, error);
+        }
+      });
+      console.log(`👂 AuthService: ${this.activityListeners.length} listeners de actividad removidos`);
+    }
     this.activityListeners = [];
-    console.log('👂 AuthService: Listeners de actividad removidos');
   }
 }
 

@@ -25,6 +25,7 @@ import { ProductsService, Product } from '../../../services/products.service';
 import { ConfirmDialog } from './confirm-dialog.component';
 import { EditProductDialog } from './edit-product-dialog.component';
 import { AddProductDialog } from './add-product-dialog.component';
+import { ValidationErrorDialog } from './validation-error-dialog.component';
 import { ACTIVE_TRANSLATIONS } from '../../../shared/lang/lang-store';
 
 
@@ -528,11 +529,11 @@ export class ProductList implements OnInit, AfterViewInit {
     return Array.from(categoriesSet).sort();
   }
 
-  private createProduct(productData: Partial<Product> & { section?: string; aisle?: string; shelf?: string; level?: string }): void {
+  private async createProduct(productData: Partial<Product> & { section?: string; aisle?: string; shelf?: string; level?: string }): Promise<void> {
     this.isLoading.set(true);
     
-    // Preparar los datos para el endpoint /products/insert
-    const productToInsert: any = {
+    // Preparar los datos para validación e inserción
+    const productToValidate: any = {
       sku: productData.sku!,
       name: productData.name!,
       value: productData.value!,
@@ -543,30 +544,53 @@ export class ProductList implements OnInit, AfterViewInit {
 
     // Incluir campos opcionales
     if (productData.image_url) {
-      productToInsert.image_url = productData.image_url;
+      productToValidate.image_url = productData.image_url;
     }
     
     // IMPORTANTE: Incluir campos de ubicación siempre (incluso si están vacíos)
     // El backend espera estos campos cuando se envían desde CSV
-    productToInsert.section = productData.section || '';
-    productToInsert.aisle = productData.aisle || '';
-    productToInsert.shelf = productData.shelf || '';
-    productToInsert.level = productData.level || '';
+    productToValidate.section = productData.section || '';
+    productToValidate.aisle = productData.aisle || '';
+    productToValidate.shelf = productData.shelf || '';
+    productToValidate.level = productData.level || '';
     
-    console.log('📦 ProductList: Datos completos a enviar al backend:', JSON.stringify(productToInsert, null, 2));
-    console.log('📦 ProductList: Campos de ubicación:', {
-      section: productToInsert.section,
-      aisle: productToInsert.aisle,
-      shelf: productToInsert.shelf,
-      level: productToInsert.level
-    });
+    console.log('🔍 ProductList: Validando producto antes de insertar...');
+    console.log('📦 ProductList: Datos a validar:', JSON.stringify(productToValidate, null, 2));
     
-    // Usar el servicio para insertar el producto
-    this.productsService.insertProduct(productToInsert).subscribe({
-      next: (result) => {
-        console.log('✅ ProductList: Producto creado exitosamente:', result);
+    try {
+      // PRIMERO: Validar el producto usando el mismo endpoint que CSV masivo
+      const validationResult = await this.fileValidationService.validateSingleProduct(productToValidate);
+      
+      if (!validationResult.isValid) {
+        // Mostrar errores de validación en un diálogo modal que no se cierre automáticamente
+        console.error('❌ ProductList: Errores de validación:', validationResult.errors);
+        this.isLoading.set(false);
+        
+        const errorMessages = validationResult.errors.length > 0 
+          ? validationResult.errors 
+          : ['Error de validación desconocido'];
+        
+        // Abrir diálogo modal con errores y warnings
+        this.dialog.open(ValidationErrorDialog, {
+          width: '500px',
+          disableClose: false, // Permite cerrar con ESC o click fuera
+          data: {
+            title: 'Errores de Validación del Producto',
+            errors: errorMessages,
+            warnings: validationResult.warnings.length > 0 ? validationResult.warnings : undefined
+          },
+          autoFocus: true,
+          restoreFocus: true
+        });
+        
+        return;
+      }
+      
+      // Si hay warnings pero es válido, mostrarlos
+      if (validationResult.warnings.length > 0) {
+        console.warn('⚠️ ProductList: Advertencias de validación:', validationResult.warnings);
         this.snackBar.open(
-          this.translate('productCreatedSuccess') || 'Producto creado exitosamente',
+          `Advertencias: ${validationResult.warnings.join('; ')}`,
           this.translate('closeButton') || 'Cerrar',
           {
             duration: 3000,
@@ -574,40 +598,68 @@ export class ProductList implements OnInit, AfterViewInit {
             verticalPosition: 'top'
           }
         );
-        // Recargar la lista de productos
-        this.loadProducts();
-      },
-      error: (error) => {
-        console.error('❌ ProductList: Error al crear producto:', error);
-        this.isLoading.set(false);
-        let errorMessage = 'Error al crear el producto';
-        
-        // Extraer mensaje de error del response
-        if (error?.error) {
-          if (typeof error.error === 'string') {
-            errorMessage = error.error;
-          } else if (error.error.message) {
-            errorMessage = error.error.message;
-          } else if (error.error.errors && Array.isArray(error.error.errors)) {
-            errorMessage = error.error.errors.join(', ');
-          } else if (error.error.error) {
-            errorMessage = error.error.error;
-          }
-        } else if (error?.message) {
-          errorMessage = error.message;
-        }
-        
-        this.snackBar.open(
-          errorMessage,
-          this.translate('closeButton') || 'Cerrar',
-          {
-            duration: 5000,
-            horizontalPosition: 'end',
-            verticalPosition: 'top'
-          }
-        );
       }
-    });
+      
+      // Usar el producto validado del backend si está disponible, sino el original
+      const productToInsert = validationResult.data && validationResult.data.length > 0 
+        ? validationResult.data[0] 
+        : productToValidate;
+      
+      console.log('✅ ProductList: Validación exitosa, insertando producto...');
+      console.log('📦 ProductList: Producto a insertar:', JSON.stringify(productToInsert, null, 2));
+      
+      // SEGUNDO: Insertar el producto usando insertValidatedProducts para consistencia
+      // Esto usa el mismo endpoint que el CSV masivo (/products/upload3/insert)
+      const productsToInsert = [productToInsert];
+      await this.fileValidationService.insertValidatedProducts(productsToInsert);
+      
+      this.isLoading.set(false);
+      console.log('✅ ProductList: Producto creado exitosamente');
+      this.snackBar.open(
+        this.translate('productCreatedSuccess') || 'Producto creado exitosamente',
+        this.translate('closeButton') || 'Cerrar',
+        {
+          duration: 3000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top'
+        }
+      );
+      
+      // Recargar la lista de productos
+      this.loadProducts();
+      
+    } catch (error: any) {
+      console.error('❌ ProductList: Error al crear producto:', error);
+      this.isLoading.set(false);
+      
+      let errorMessage = 'Error al crear el producto';
+      
+      // Extraer mensaje de error del response
+      if (error?.error) {
+        if (typeof error.error === 'string') {
+          errorMessage = error.error;
+        } else if (error.error.message) {
+          errorMessage = error.error.message;
+        } else if (error.error.errors && Array.isArray(error.error.errors)) {
+          errorMessage = error.error.errors.join(', ');
+        } else if (error.error.error) {
+          errorMessage = error.error.error;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      this.snackBar.open(
+        errorMessage,
+        this.translate('closeButton') || 'Cerrar',
+        {
+          duration: 5000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        }
+      );
+    }
   }
 
   editProduct(product: Product): void {

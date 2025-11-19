@@ -657,6 +657,150 @@ describe('FileValidationService', () => {
     });
   });
 
+  describe('validateSingleProduct', () => {
+    beforeEach(() => {
+      // Reset fetch mock
+      (window as any).fetch = jasmine.createSpy('fetch');
+    });
+
+    it('should validate single product successfully', async () => {
+      const product: ProductTemplate = {
+        sku: 'TEST-001',
+        name: 'Product 1',
+        value: 1000,
+        category_name: 'Cat 1',
+        quantity: 10,
+        warehouse_id: 1
+      };
+
+      const mockResponse = {
+        errors: [],
+        warnings: [],
+        validated_products: [product]
+      };
+
+      (window as any).fetch.and.returnValue(
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockResponse)
+        })
+      );
+
+      const result = await service.validateSingleProduct(product);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors.length).toBe(0);
+      expect(result.data).toBeDefined();
+      expect(result.data?.length).toBe(1);
+    });
+
+    it('should return errors when validation fails', async () => {
+      const product: ProductTemplate = {
+        sku: 'DUPLICATE-SKU',
+        name: 'Product 1',
+        value: 1000,
+        category_name: 'Cat 1',
+        quantity: 10,
+        warehouse_id: 1
+      };
+
+      const mockResponse = {
+        errors: ['El SKU ya existe en la base de datos'],
+        warnings: [],
+        validated_products: []
+      };
+
+      (window as any).fetch.and.returnValue(
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockResponse)
+        })
+      );
+
+      const result = await service.validateSingleProduct(product);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('El SKU ya existe en la base de datos');
+    });
+
+    it('should handle warnings', async () => {
+      const product: ProductTemplate = {
+        sku: 'TEST-002',
+        name: 'Product 2',
+        value: 1000,
+        category_name: 'Cat 1',
+        quantity: 10,
+        warehouse_id: 1
+      };
+
+      const mockResponse = {
+        errors: [],
+        warnings: ['SKU muy corto, considerar usar más de 5 caracteres'],
+        validated_products: [product]
+      };
+
+      (window as any).fetch.and.returnValue(
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockResponse)
+        })
+      );
+
+      const result = await service.validateSingleProduct(product);
+
+      expect(result.isValid).toBe(true);
+      expect(result.warnings.length).toBe(1);
+    });
+
+    it('should handle HTTP error response', async () => {
+      const product: ProductTemplate = {
+        sku: 'TEST-003',
+        name: 'Product 3',
+        value: 1000,
+        category_name: 'Cat 1',
+        quantity: 10,
+        warehouse_id: 1
+      };
+
+      (window as any).fetch.and.returnValue(
+        Promise.resolve({
+          ok: false,
+          status: 400,
+          text: () => Promise.resolve(JSON.stringify({
+            error: 'Bad request',
+            message: 'Datos inválidos'
+          }))
+        })
+      );
+
+      const result = await service.validateSingleProduct(product);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
+    });
+
+    it('should handle network errors', async () => {
+      const product: ProductTemplate = {
+        sku: 'TEST-004',
+        name: 'Product 4',
+        value: 1000,
+        category_name: 'Cat 1',
+        quantity: 10,
+        warehouse_id: 1
+      };
+
+      (window as any).fetch.and.returnValue(Promise.reject(new Error('Network error')));
+
+      const result = await service.validateSingleProduct(product);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain('No se pudo conectar con el servidor para validación');
+    });
+  });
+
   describe('validateWithoutBackend', () => {
     it('should validate without backend connection', async () => {
       const data: ProductTemplate[] = [
