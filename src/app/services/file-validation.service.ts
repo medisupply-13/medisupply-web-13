@@ -607,6 +607,88 @@ export class FileValidationService {
   }
 
   /**
+   * Valida un solo producto usando el mismo endpoint de validación masiva
+   * Útil para validar productos individuales antes de insertarlos
+   */
+  async validateSingleProduct(product: ProductTemplate): Promise<ValidationResult> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    try {
+      // Convertir el producto a array para usar el mismo endpoint
+      const productsArray = [product];
+      const jsonPayload = JSON.stringify(productsArray);
+
+      console.log('🔍 FileValidationService: Validando producto individual');
+      console.log('📦 Producto a validar:', JSON.stringify(product, null, 2));
+      console.log('🌐 URL:', `${environment.baseUrl}products/upload3/validate`);
+
+      const response = await fetch(`${environment.baseUrl}products/upload3/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: jsonPayload
+      });
+
+      console.log('📊 FileValidationService: Status de respuesta:', response.status);
+
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error('❌ FileValidationService: Error en validación:', responseText);
+
+        try {
+          const errorJson = JSON.parse(responseText);
+          if (errorJson.error) {
+            errors.push(`Error del backend: ${errorJson.error}`);
+          } else if (errorJson.message) {
+            errors.push(`Error del backend: ${errorJson.message}`);
+          } else if (errorJson.errors && Array.isArray(errorJson.errors)) {
+            errors.push(...errorJson.errors);
+          } else {
+            errors.push(`Error del backend: ${responseText}`);
+          }
+        } catch {
+          errors.push(`Error del backend (${response.status}): ${responseText}`);
+        }
+
+        return { isValid: false, errors, warnings };
+      }
+
+      // Leer respuesta exitosa
+      const result = await response.json();
+      console.log('✅ FileValidationService: Respuesta de validación:', result);
+
+      // Procesar errores
+      if (result.errors && result.errors.length > 0) {
+        errors.push(...result.errors);
+      }
+
+      // Procesar warnings
+      if (result.warnings && result.warnings.length > 0) {
+        warnings.push(...result.warnings);
+      }
+
+      // Obtener producto validado del backend si está disponible
+      const validatedProducts = result.validated_products && result.validated_products.length > 0 
+        ? result.validated_products 
+        : (errors.length === 0 ? productsArray : undefined);
+
+      return {
+        isValid: errors.length === 0 && validatedProducts !== undefined,
+        errors,
+        warnings,
+        data: validatedProducts
+      };
+
+    } catch (error) {
+      console.error('❌ FileValidationService: Error al validar producto:', error);
+      errors.push('No se pudo conectar con el servidor para validación');
+      return { isValid: false, errors, warnings };
+    }
+  }
+
+  /**
    * Inserta productos ya validados usando el endpoint dedicado
    */
   async insertValidatedProducts(products: any[]): Promise<any> {

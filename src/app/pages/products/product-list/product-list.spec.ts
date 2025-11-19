@@ -56,7 +56,8 @@ describe('ProductList', () => {
       'validateAgainstExistingProducts',
       'generateTemplateCSV',
       'generateTemplateCSVWithRealData',
-      'insertValidatedProducts'
+      'insertValidatedProducts',
+      'validateSingleProduct'
     ]);
     const routerSpy = jasmine.createSpyObj('Router', ['navigate']);
     const snackBarSpy = jasmine.createSpyObj('MatSnackBar', ['open']);
@@ -555,7 +556,7 @@ describe('ProductList', () => {
   });
 
   describe('createProduct', () => {
-    it('should create product successfully', fakeAsync(() => {
+    it('should validate and create product successfully', async () => {
       const productData = {
         sku: 'MED-003',
         name: 'Producto 3',
@@ -567,20 +568,66 @@ describe('ProductList', () => {
         shelf: '2',
         level: '3'
       };
-      
-      productsService.insertProduct.and.returnValue(of({ success: true }));
+
+      const validatedProduct = {
+        sku: 'MED-003',
+        name: 'Producto 3',
+        value: 3000,
+        category_name: 'Suministros',
+        quantity: 50,
+        warehouse_id: 1,
+        section: 'A',
+        aisle: '1',
+        shelf: '2',
+        level: '3'
+      };
+
+      const validationResult = {
+        isValid: true,
+        errors: [],
+        warnings: [],
+        data: [validatedProduct]
+      };
+
+      fileValidationService.validateSingleProduct.and.returnValue(Promise.resolve(validationResult));
+      fileValidationService.insertValidatedProducts.and.returnValue(Promise.resolve({ success: true }));
       productsService.getAvailableProducts.and.returnValue(of(mockProductsResponse));
-      
-      (component as any).createProduct(productData);
-      
-      tick();
-      
-      expect(productsService.insertProduct).toHaveBeenCalled();
+
+      await (component as any).createProduct(productData);
+
+      expect(fileValidationService.validateSingleProduct).toHaveBeenCalled();
+      expect(fileValidationService.insertValidatedProducts).toHaveBeenCalled();
       expect(snackBar.open).toHaveBeenCalled();
       expect(productsService.getAvailableProducts).toHaveBeenCalled();
-    }));
+    });
 
-    it('should handle error when creating product with string error', () => {
+    it('should show validation errors when product fails validation', async () => {
+      const productData = {
+        sku: 'DUPLICATE-SKU',
+        name: 'Producto 3',
+        value: 3000,
+        category_name: 'Suministros',
+        total_quantity: 50
+      };
+
+      const validationResult = {
+        isValid: false,
+        errors: ['El SKU ya existe en la base de datos'],
+        warnings: [],
+        data: undefined
+      };
+
+      fileValidationService.validateSingleProduct.and.returnValue(Promise.resolve(validationResult));
+
+      await (component as any).createProduct(productData);
+
+      expect(fileValidationService.validateSingleProduct).toHaveBeenCalled();
+      expect(fileValidationService.insertValidatedProducts).not.toHaveBeenCalled();
+      expect(component.isLoading()).toBe(false);
+      expect(snackBar.open).toHaveBeenCalled();
+    });
+
+    it('should show warnings when validation has warnings but is valid', async () => {
       const productData = {
         sku: 'MED-003',
         name: 'Producto 3',
@@ -588,84 +635,68 @@ describe('ProductList', () => {
         category_name: 'Suministros',
         total_quantity: 50
       };
-      
-      productsService.insertProduct.and.returnValue(
-        throwError(() => ({ error: 'Error string' }))
-      );
-      
-      (component as any).createProduct(productData);
-      
-      expect(component.isLoading()).toBe(false);
-      expect(snackBar.open).toHaveBeenCalled();
-    });
 
-    it('should handle error when creating product with error object', () => {
-      const productData = {
+      const validatedProduct = {
         sku: 'MED-003',
         name: 'Producto 3',
         value: 3000,
         category_name: 'Suministros',
-        total_quantity: 50
+        quantity: 50,
+        warehouse_id: 1
       };
-      
-      productsService.insertProduct.and.returnValue(
-        throwError(() => ({ error: { message: 'Error message' } }))
-      );
-      
-      (component as any).createProduct(productData);
-      
-      expect(component.isLoading()).toBe(false);
-      expect(snackBar.open).toHaveBeenCalled();
-    });
 
-    it('should handle error with errors array', () => {
-      const productData = {
-        sku: 'MED-003',
-        name: 'Producto 3',
-        value: 3000,
-        category_name: 'Suministros',
-        total_quantity: 50
+      const validationResult = {
+        isValid: true,
+        errors: [],
+        warnings: ['SKU muy corto, considerar usar más de 5 caracteres'],
+        data: [validatedProduct]
       };
-      
-      productsService.insertProduct.and.returnValue(
-        throwError(() => ({ error: { errors: ['Error 1', 'Error 2'] } }))
-      );
-      
-      (component as any).createProduct(productData);
-      
-      expect(component.isLoading()).toBe(false);
-      expect(snackBar.open).toHaveBeenCalled();
-    });
 
-    it('should include location fields when provided', () => {
-      const productData = {
-        sku: 'MED-003',
-        name: 'Producto 3',
-        value: 3000,
-        category_name: 'Suministros',
-        total_quantity: 50,
-        section: 'A',
-        aisle: '1',
-        shelf: '2',
-        level: '3'
-      };
-      
-      productsService.insertProduct.and.returnValue(of({ success: true }));
+      fileValidationService.validateSingleProduct.and.returnValue(Promise.resolve(validationResult));
+      fileValidationService.insertValidatedProducts.and.returnValue(Promise.resolve({ success: true }));
       productsService.getAvailableProducts.and.returnValue(of(mockProductsResponse));
-      
-      (component as any).createProduct(productData);
-      
-      expect(productsService.insertProduct).toHaveBeenCalledWith(
-        jasmine.objectContaining({
-          section: 'A',
-          aisle: '1',
-          shelf: '2',
-          level: '3'
-        })
-      );
+
+      await (component as any).createProduct(productData);
+
+      expect(fileValidationService.validateSingleProduct).toHaveBeenCalled();
+      expect(snackBar.open).toHaveBeenCalledTimes(2); // Warnings + success
     });
 
-    it('should use default warehouse_id when not selected', () => {
+    it('should handle error during insertion after validation', async () => {
+      const productData = {
+        sku: 'MED-003',
+        name: 'Producto 3',
+        value: 3000,
+        category_name: 'Suministros',
+        total_quantity: 50
+      };
+
+      const validatedProduct = {
+        sku: 'MED-003',
+        name: 'Producto 3',
+        value: 3000,
+        category_name: 'Suministros',
+        quantity: 50,
+        warehouse_id: 1
+      };
+
+      const validationResult = {
+        isValid: true,
+        errors: [],
+        warnings: [],
+        data: [validatedProduct]
+      };
+
+      fileValidationService.validateSingleProduct.and.returnValue(Promise.resolve(validationResult));
+      fileValidationService.insertValidatedProducts.and.returnValue(Promise.reject({ error: 'Error al insertar' }));
+
+      await (component as any).createProduct(productData);
+
+      expect(component.isLoading()).toBe(false);
+      expect(snackBar.open).toHaveBeenCalled();
+    });
+
+    it('should use default warehouse_id when not selected', async () => {
       component.selectedWarehouseId = null;
       const productData = {
         sku: 'MED-003',
@@ -674,13 +705,30 @@ describe('ProductList', () => {
         category_name: 'Suministros',
         total_quantity: 50
       };
-      
-      productsService.insertProduct.and.returnValue(of({ success: true }));
+
+      const validatedProduct = {
+        sku: 'MED-003',
+        name: 'Producto 3',
+        value: 3000,
+        category_name: 'Suministros',
+        quantity: 50,
+        warehouse_id: 1
+      };
+
+      const validationResult = {
+        isValid: true,
+        errors: [],
+        warnings: [],
+        data: [validatedProduct]
+      };
+
+      fileValidationService.validateSingleProduct.and.returnValue(Promise.resolve(validationResult));
+      fileValidationService.insertValidatedProducts.and.returnValue(Promise.resolve({ success: true }));
       productsService.getAvailableProducts.and.returnValue(of(mockProductsResponse));
-      
-      (component as any).createProduct(productData);
-      
-      expect(productsService.insertProduct).toHaveBeenCalledWith(
+
+      await (component as any).createProduct(productData);
+
+      expect(fileValidationService.validateSingleProduct).toHaveBeenCalledWith(
         jasmine.objectContaining({
           warehouse_id: 1
         })
