@@ -25,6 +25,7 @@ import { ProductsService, Product } from '../../../services/products.service';
 import { ConfirmDialog } from './confirm-dialog.component';
 import { EditProductDialog } from './edit-product-dialog.component';
 import { AddProductDialog } from './add-product-dialog.component';
+import { ValidationErrorDialog } from './validation-error-dialog.component';
 import { ACTIVE_TRANSLATIONS } from '../../../shared/lang/lang-store';
 
 
@@ -561,7 +562,7 @@ export class ProductList implements OnInit, AfterViewInit {
       const validationResult = await this.fileValidationService.validateSingleProduct(productToValidate);
       
       if (!validationResult.isValid) {
-        // Mostrar errores de validación igual que en CSV masivo
+        // Mostrar errores de validación en un diálogo modal que no se cierre automáticamente
         console.error('❌ ProductList: Errores de validación:', validationResult.errors);
         this.isLoading.set(false);
         
@@ -569,32 +570,19 @@ export class ProductList implements OnInit, AfterViewInit {
           ? validationResult.errors 
           : ['Error de validación desconocido'];
         
-        // Mostrar warnings si hay
-        if (validationResult.warnings.length > 0) {
-          console.warn('⚠️ ProductList: Advertencias de validación:', validationResult.warnings);
-          this.snackBar.open(
-            `Advertencias: ${validationResult.warnings.join('; ')}`,
-            this.translate('closeButton') || 'Cerrar',
-            {
-              duration: 4000,
-              horizontalPosition: 'end',
-              verticalPosition: 'top'
-            }
-          );
-        }
+        // Abrir diálogo modal con errores y warnings
+        this.dialog.open(ValidationErrorDialog, {
+          width: '500px',
+          disableClose: false, // Permite cerrar con ESC o click fuera
+          data: {
+            title: 'Errores de Validación del Producto',
+            errors: errorMessages,
+            warnings: validationResult.warnings.length > 0 ? validationResult.warnings : undefined
+          },
+          autoFocus: true,
+          restoreFocus: true
+        });
         
-        // Mostrar errores (bloqueantes)
-        const errorMessage = errorMessages.join('; ');
-        this.snackBar.open(
-          errorMessage,
-          this.translate('closeButton') || 'Cerrar',
-          {
-            duration: 5000,
-            horizontalPosition: 'end',
-            verticalPosition: 'top',
-            panelClass: ['error-snackbar']
-          }
-        );
         return;
       }
       
