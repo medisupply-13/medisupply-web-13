@@ -252,7 +252,27 @@ export class SalesReportService {
     console.log('📦 SalesReportService: Payload completo:', JSON.stringify(request, null, 2));
     console.log('⏱️ SalesReportService: Timestamp inicio:', new Date().toISOString());
 
-    return this.http.post<SalesComplianceResponse>(url, request).pipe(
+    return this.http.post<any>(url, request).pipe(
+      map((response) => {
+        // Verificar si la respuesta tiene success: false (error del backend con HTTP 200)
+        if (response && response.success === false) {
+          console.error('❌ SalesReportService: ===== RESPUESTA CON ERROR DEL BACKEND =====');
+          console.error('📋 SalesReportService: Response completa:', JSON.stringify(response, null, 2));
+          console.error('📋 SalesReportService: Error type:', response.error_type || 'Desconocido');
+          console.error('📋 SalesReportService: Mensaje:', response.message || 'Sin mensaje');
+          
+          // Crear un error similar a los errores HTTP para manejo consistente
+          const error: any = new Error(response.message || 'Error en la respuesta del backend');
+          error.status = response.status || 400;
+          error.error = {
+            message: response.message,
+            error_type: response.error_type,
+            success: false
+          };
+          throw error;
+        }
+        return response as SalesComplianceResponse;
+      }),
       tap((response) => {
         const endTime = performance.now();
         const duration = endTime - startTime;

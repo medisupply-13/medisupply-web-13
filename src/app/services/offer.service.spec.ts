@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { OfferService, CreateSalesPlanPayload, CreateSalesPlanResponse } from './offer.service';
+import { OfferService, CreateSalesPlanPayload, CreateSalesPlanResponse, ValidateStockResponse } from './offer.service';
 import { environment } from '../../environments/environment';
 
 describe('OfferService', () => {
@@ -195,6 +195,19 @@ describe('OfferService', () => {
       req.flush(mockProducts);
     });
 
+    it('should handle empty array response', (done) => {
+      service.getOfferProducts().subscribe({
+        next: (products) => {
+          expect(products).toEqual([]);
+          expect(products.length).toBe(0);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${offerApi}offers/products`);
+      req.flush([]);
+    });
+
     it('should handle error', (done) => {
       service.getOfferProducts().subscribe({
         next: () => fail('Should have failed'),
@@ -206,6 +219,114 @@ describe('OfferService', () => {
 
       const req = httpMock.expectOne(`${offerApi}offers/products`);
       req.error(new ErrorEvent('Network error'), { status: 500 });
+    });
+  });
+
+  describe('validateStock', () => {
+    it('should validate stock successfully with sufficient stock', (done) => {
+      const productId = 1;
+      const individualGoal = 100;
+
+      const mockResponse: ValidateStockResponse = {
+        valid: true,
+        message: 'Stock disponible',
+        available_stock: 200
+      };
+
+      service.validateStock(productId, individualGoal).subscribe({
+        next: (response) => {
+          expect(response.valid).toBe(true);
+          expect(response.available_stock).toBe(200);
+          expect(response.message).toBe('Stock disponible');
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${offerApi}products/${productId}/validate-stock?individual_goal=${individualGoal}`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('individual_goal')).toBe(individualGoal.toString());
+      req.flush(mockResponse);
+    });
+
+    it('should validate stock with insufficient stock', (done) => {
+      const productId = 1;
+      const individualGoal = 200;
+
+      const mockResponse: ValidateStockResponse = {
+        valid: false,
+        message: 'No hay suficiente stock disponible',
+        available_stock: 100
+      };
+
+      service.validateStock(productId, individualGoal).subscribe({
+        next: (response) => {
+          expect(response.valid).toBe(false);
+          expect(response.available_stock).toBe(100);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${offerApi}products/${productId}/validate-stock?individual_goal=${individualGoal}`);
+      req.flush(mockResponse);
+    });
+
+
+    it('should handle network error', (done) => {
+      const productId = 1;
+      const individualGoal = 100;
+
+      service.validateStock(productId, individualGoal).subscribe({
+        next: () => fail('Should have failed'),
+        error: (error) => {
+          expect(error).toBeTruthy();
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${offerApi}products/${productId}/validate-stock?individual_goal=${individualGoal}`);
+      req.error(new ErrorEvent('Network error'), { status: 0 });
+    });
+
+    it('should handle zero goal', (done) => {
+      const productId = 1;
+      const individualGoal = 0;
+
+      const mockResponse: ValidateStockResponse = {
+        valid: true,
+        message: 'Stock disponible',
+        available_stock: 100
+      };
+
+      service.validateStock(productId, individualGoal).subscribe({
+        next: (response) => {
+          expect(response.valid).toBe(true);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${offerApi}products/${productId}/validate-stock?individual_goal=0`);
+      req.flush(mockResponse);
+    });
+
+    it('should handle large goal values', (done) => {
+      const productId = 1;
+      const individualGoal = 1000000;
+
+      const mockResponse: ValidateStockResponse = {
+        valid: false,
+        message: 'Stock insuficiente',
+        available_stock: 1000
+      };
+
+      service.validateStock(productId, individualGoal).subscribe({
+        next: (response) => {
+          expect(response.valid).toBe(false);
+          done();
+        }
+      });
+
+      const req = httpMock.expectOne(`${offerApi}products/${productId}/validate-stock?individual_goal=${individualGoal}`);
+      req.flush(mockResponse);
     });
   });
 });

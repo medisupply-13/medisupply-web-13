@@ -12,6 +12,7 @@
   "goalReportSuccess": "Goal compliance report generated successfully",
   "goalReportError": "Oops! There was an error generating the report. Please try again.",
   "goalReportNoData": "Oops! No compliance data found for this period",
+  "goalReportRegionError": "The selected region does not match the vendor's region. Please verify the region selection.",
   "goalReportTitle": "Compliance Report",
   "goalReportVendorCompliance": "Vendor compliance",
   "goalReportProduct": "Product",
