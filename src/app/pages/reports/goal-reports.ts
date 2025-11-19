@@ -159,7 +159,7 @@ export class GoalReports implements OnInit {
         console.error('📋 GoalReports: Status HTTP:', errorStatus);
         console.error('❌ GoalReports: ===== ERROR PROCESADO =====');
         
-        this.messageType.set('error');
+          this.messageType.set('error');
         
         // Manejar diferentes tipos de errores
         // Verificar primero por tipo de error específico
