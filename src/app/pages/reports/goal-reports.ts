@@ -7,6 +7,7 @@ import { StatusMessage } from '../../shared/status-message/status-message';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { SalesReportService, SalesComplianceRequest } from '../../services/sales-report.service';
 import { OfferService } from '../../services/offer.service';
+import { ACTIVE_TRANSLATIONS, currentLangSignal } from '../../shared/lang/lang-store';
 
 @Component({
   selector: 'app-goal-reports',
@@ -168,10 +169,10 @@ export class GoalReports implements OnInit {
   }
 
   getStatusLabel(status: string): string {
-    if (status === 'verde') return 'Cumplido';
-    if (status === 'amarillo') return 'En progreso';
-    if (status === 'rojo') return 'Sin cumplir';
-    if (status === 'gris') return 'Sin meta'; // Etiqueta para el nuevo estado
+    if (status === 'verde') return ACTIVE_TRANSLATIONS['goalReportStatusCompleted'] || 'Cumplido';
+    if (status === 'amarillo') return ACTIVE_TRANSLATIONS['goalReportStatusInProgress'] || 'En progreso';
+    if (status === 'rojo') return ACTIVE_TRANSLATIONS['goalReportStatusNotCompleted'] || 'Sin cumplir';
+    if (status === 'gris') return ACTIVE_TRANSLATIONS['goalReportStatusNoGoal'] || 'Sin meta';
     return '';
   }
 
@@ -225,7 +226,13 @@ export class GoalReports implements OnInit {
   }
 
   formatNumber(value: number): string {
-    return new Intl.NumberFormat('es-CO').format(value);
+    const lang = currentLangSignal();
+    const localeMap: Record<string, string> = {
+      'es': 'es-CO',
+      'en': 'en-US'
+    };
+    const locale = localeMap[lang] || 'es-CO';
+    return new Intl.NumberFormat(locale).format(value);
   }
 
   getCumplimientoTotalPct(): number {
@@ -273,7 +280,13 @@ export class GoalReports implements OnInit {
     try {
       const [year, month, day] = dateString.split('-').map(Number);
       const date = new Date(Date.UTC(year, month - 1, day));
-      return new Intl.DateTimeFormat('es-CO', {
+      const lang = currentLangSignal();
+      const localeMap: Record<string, string> = {
+        'es': 'es-CO',
+        'en': 'en-US'
+      };
+      const locale = localeMap[lang] || 'es-CO';
+      return new Intl.DateTimeFormat(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',

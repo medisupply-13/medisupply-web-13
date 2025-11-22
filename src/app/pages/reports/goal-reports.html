@@ -67,36 +67,36 @@
       </div>
       <div class="info-row" *ngIf="reportData().region">
         <div class="info-item">
-          <span class="info-label">Región:</span>
+          <span class="info-label">{{ 'goalReportRegionLabel' | translate }}:</span>
           <span class="info-value">{{ reportData().region }}</span>
         </div>
         <div class="info-item" *ngIf="reportData().ventas_region">
-          <span class="info-label">Ventas de la Región:</span>
+          <span class="info-label">{{ 'goalReportRegionSales' | translate }}:</span>
           <span class="info-value highlight">{{ formatNumber(reportData().ventas_region) }}</span>
         </div>
         <div class="info-item" *ngIf="reportData().cumplimiento_region_pct !== undefined">
-          <span class="info-label">Cumplimiento Región:</span>
+          <span class="info-label">{{ 'goalReportRegionCompliance' | translate }}:</span>
           <span class="info-value">{{ getCumplimientoRegionPct() | number:'1.2-2' }}%</span>
         </div>
       </div>
       <div class="info-row" *ngIf="reportData().num_sellers_region || reportData().num_plans_active">
         <div class="info-item" *ngIf="reportData().num_sellers_region">
-          <span class="info-label">Vendedores en la Región:</span>
+          <span class="info-label">{{ 'goalReportSellersInRegion' | translate }}:</span>
           <span class="info-value">{{ reportData().num_sellers_region }}</span>
         </div>
 
         <div class="info-item" *ngIf="reportData().total_goal">
-          <span class="info-label">Meta Individual del Vendedor:</span>
+          <span class="info-label">{{ 'goalReportIndividualVendorGoal' | translate }}:</span>
           <span class="info-value">{{ formatNumber(reportData().total_goal || 0) }}</span>
         </div>
 
         <div class="info-item" *ngIf="reportData().total_goal">
-          <span class="info-label">Meta Total Región:</span>
+          <span class="info-label">{{ 'goalReportTotalRegionGoal' | translate }}:</span>
           <span class="info-value">{{ formatNumber(reportData().total_goal || 0) }}</span>
         </div>
 
         <div class="info-item" *ngIf="reportData().num_plans_active">
-          <span class="info-label">Planes Activos:</span>
+          <span class="info-label">{{ 'goalReportActivePlans' | translate }}:</span>
           <span class="info-value">{{ reportData().num_plans_active }}</span>
         </div>
       </div>
