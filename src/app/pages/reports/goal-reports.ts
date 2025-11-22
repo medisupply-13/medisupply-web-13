@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PageHeader } from '../../shared/page-header/page-header';
 import { CustomSelect } from '../../shared/custom-select/custom-select';
@@ -40,11 +40,65 @@ export class GoalReports implements OnInit {
     return !this.vendedor() || !this.quarter() || !this.region();
   }
 
+  // Computed signal para obtener el símbolo de moneda según el país
+  currencySymbol = computed(() => {
+    const country = localStorage.getItem('userCountry') || 'CO';
+    const symbols: Record<string, string> = { 'CO': 'COP', 'PE': 'PEN', 'EC': 'USD', 'MX': 'MXN' };
+    return symbols[country] || 'USD';
+  });
+
   constructor(
     private salesReportService: SalesReportService,
     private offerService: OfferService
   ) {
     console.log('🏗️ GoalReports: Componente instanciado');
+  }
+
+  // Función para convertir valores según el país
+  private convertValue(value: number): number {
+    const country = localStorage.getItem('userCountry') || 'CO';
+    
+    // Tasas de conversión actualizadas (octubre 2024)
+    // El backend devuelve valores en pesos colombianos (COP)
+    const rates: Record<string, number> = { 
+      'CO': 1,           // Colombia - Sin conversión (ya está en pesos)
+      'PE': 0.0014,      // Perú - COP a PEN (1 COP ≈ 0.0014 PEN)
+      'EC': 0.00026,     // Ecuador - COP a USD (1 COP ≈ 0.00026 USD)
+      'MX': 0.0047       // México - COP a MXN (1 COP ≈ 0.0047 MXN)
+    };
+    
+    const rate = rates[country] || 1;
+    // No redondear aquí, dejar que el formateo maneje los decimales
+    return value * rate;
+  }
+
+  // Método para formatear precios con decimales apropiados (similar a productos)
+  formatPrice(price: number): string {
+    // Usar el formato de moneda con el símbolo correcto según el país
+    const country = localStorage.getItem('userCountry') || 'CO';
+    const currency = this.currencySymbol();
+
+    // Formatear según el país
+    const localeMap: Record<string, string> = {
+      'CO': 'es-CO',
+      'PE': 'es-PE',
+      'EC': 'es-EC',
+      'MX': 'es-MX'
+    };
+
+    const locale = localeMap[country] || 'es-CO';
+
+    // Para valores muy pequeños, mostrar más decimales
+    const minDigits = price < 1 ? 4 : 2;
+    const maxDigits = price < 1 ? 4 : 2;
+
+    const numberFormatted = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: minDigits,
+      maximumFractionDigits: maxDigits
+    }).format(price);
+
+    // Unir el número con el código de moneda (por ejemplo, "1,234.00 COP")
+    return `${numberFormatted} ${currency}`;
   }
 
   ngOnInit(): void {
@@ -120,7 +174,26 @@ export class GoalReports implements OnInit {
     this.salesReportService.getSalesCompliance(request).subscribe({
       next: (response) => {
         console.log('✅ GoalReports: Reporte recibido:', response.data);
-        this.reportData.set(response.data);
+        
+        // Convertir valores monetarios según el país
+        const rawData = response.data || response;
+        const convertedData = {
+          ...rawData,
+          // Convertir ventas totales
+          ventasTotales: this.convertValue(rawData.ventasTotales || 0),
+          // Convertir ventas de región
+          ventas_region: rawData.ventas_region ? this.convertValue(rawData.ventas_region) : rawData.ventas_region,
+          // Convertir meta total
+          total_goal: rawData.total_goal ? this.convertValue(rawData.total_goal) : rawData.total_goal,
+          // Convertir valores en detalle de productos
+          detalle_productos: rawData.detalle_productos ? rawData.detalle_productos.map((producto: any) => ({
+            ...producto,
+            ventas: this.convertValue(producto.ventas || 0),
+            goal: producto.goal ? this.convertValue(producto.goal) : producto.goal
+          })) : rawData.detalle_productos
+        };
+        
+        this.reportData.set(convertedData);
         this.messageType.set('success');
         this.messageText.set('goalReportSuccess');
         this.showMessage.set(true);
