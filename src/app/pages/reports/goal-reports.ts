@@ -163,15 +163,37 @@ export class GoalReports implements OnInit {
   getStatusColor(status: string): string {
     if (status === 'verde') return 'green';
     if (status === 'amarillo') return 'yellow';
+    if (status === 'gris') return 'gray';
     return 'red';
   }
 
   getStatusLabel(status: string): string {
     if (status === 'verde') return 'Cumplido';
     if (status === 'amarillo') return 'En progreso';
-    return 'Sin cumplir';
+    if (status === 'rojo') return 'Sin cumplir';
+    if (status === 'gris') return 'Sin meta'; // Etiqueta para el nuevo estado
+    return '';
   }
 
+  // --- NUEVA LÓGICA: Calcula el status del producto basado en el porcentaje visualizado ---
+  getProductCalculatedStatus(product: any): string {
+    // 1. Primero verificamos si tiene meta
+    const goal = product.goal ?? 0;
+    
+    // Si la meta es 0 o nula, devolvemos estado neutro
+    if (goal === 0) {
+      return 'gris';
+    }
+
+    // 2. Si tiene meta, calculamos el porcentaje
+    const pct = this.getProductCumplimientoPct(product);
+    
+    if (pct >= 100) return 'verde';
+    if (pct >= 60) return 'amarillo';
+    return 'rojo';
+  }
+
+  // Actualizado para usar el status calculado, no el del backend
   getProductStatus(): string {
     const data = this.reportData();
     if (!data || !data.detalle_productos || data.detalle_productos.length === 0) {
@@ -179,7 +201,8 @@ export class GoalReports implements OnInit {
     }
     const statusCounts: { [key: string]: number } = {};
     data.detalle_productos.forEach((p: any) => {
-      const status = p.status || 'rojo';
+      // Usamos la nueva función de cálculo local
+      const status = this.getProductCalculatedStatus(p);
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
     if (statusCounts['verde'] && statusCounts['verde'] > 0) return 'verde';
@@ -187,17 +210,15 @@ export class GoalReports implements OnInit {
     return 'rojo';
   }
 
-  // --- AJUSTE 1: Ignorar status del backend y calcular según porcentaje real ---
   getRegionStatus(): string {
-    const pct = this.getCumplimientoRegionPct(); // Esto ya devuelve el % correcto (ej: 546)
+    const pct = this.getCumplimientoRegionPct();
     if (pct >= 100) return 'verde';
     if (pct >= 60) return 'amarillo';
     return 'rojo';
   }
 
-  // --- AJUSTE 2: Ignorar status del backend y calcular según porcentaje real ---
   getTotalStatus(): string {
-    const pct = this.getCumplimientoTotalPct(); // Esto ya devuelve el % correcto (ej: 283)
+    const pct = this.getCumplimientoTotalPct();
     if (pct >= 100) return 'verde';
     if (pct >= 60) return 'amarillo';
     return 'rojo';
@@ -308,9 +329,11 @@ export class GoalReports implements OnInit {
     const productos = data.detalle_productos;
     const productsWithGoal = productos.filter((p: any) => (p.goal ?? 0) > 0);
     const productsWithoutGoal = productos.filter((p: any) => (p.goal ?? 0) === 0);
-    const productsCompleted = productos.filter((p: any) => p.status === 'verde');
-    const productsInProgress = productos.filter((p: any) => p.status === 'amarillo');
-    const productsNotCompleted = productos.filter((p: any) => p.status === 'rojo');
+
+    // Actualizado para usar el status calculado localmente
+    const productsCompleted = productos.filter((p: any) => this.getProductCalculatedStatus(p) === 'verde');
+    const productsInProgress = productos.filter((p: any) => this.getProductCalculatedStatus(p) === 'amarillo');
+    const productsNotCompleted = productos.filter((p: any) => this.getProductCalculatedStatus(p) === 'rojo');
 
     const totalGoal = (data.total_goal ?? 0);
 
@@ -335,7 +358,8 @@ export class GoalReports implements OnInit {
     if (productsWithGoal.length === 0) return 'rojo';
     const statusCounts: { [key: string]: number } = {};
     productsWithGoal.forEach((p: any) => {
-      const status = p.status || 'rojo';
+      // Actualizado para usar status calculado localmente
+      const status = this.getProductCalculatedStatus(p);
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
     if (statusCounts['verde'] && statusCounts['verde'] > 0) return 'verde';

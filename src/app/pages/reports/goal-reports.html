@@ -216,7 +216,7 @@
           </tr>
           </thead>
           <tbody>
-          <tr *ngFor="let product of getDetalleProductosSorted()" [class]="'status-' + product.status">
+          <tr *ngFor="let product of getDetalleProductosSorted()" [class]="'status-' + getProductCalculatedStatus(product)">
             <td class="product-id">{{ product.product_id }}</td>
             <td class="sales-value">{{ formatNumber(product.ventas || 0) }}</td>
 
@@ -238,8 +238,8 @@
                 </span>
             </td>
             <td class="status-cell">
-                <span class="status-badge" [class]="'status-' + product.status">
-                  {{ getStatusLabel(product.status) }}
+                <span class="status-badge" [class]="'status-' + getProductCalculatedStatus(product)">
+                  {{ getStatusLabel(getProductCalculatedStatus(product)) }}
                 </span>
             </td>
           </tr>
