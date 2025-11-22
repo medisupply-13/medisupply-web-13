@@ -49,7 +49,8 @@ export class SalesReport implements OnInit {
     };
     
     const rate = rates[country] || 1;
-    const convertedValue = Math.round(value * rate);
+    // No redondear aquí, dejar que el formateo maneje los decimales
+    const convertedValue = value * rate;
     
     console.log('💰 SalesReport: Conversión de valor:', {
       valorOriginal: value,
@@ -80,6 +81,35 @@ export class SalesReport implements OnInit {
     const symbols: Record<string, string> = { 'CO': 'COP', 'PE': 'PEN', 'EC': 'USD', 'MX': 'MXN' };
     return symbols[country] || 'USD';
   });
+
+  // Método para formatear precios con decimales apropiados (similar a productos)
+  formatPrice(price: number): string {
+    // Usar el formato de moneda con el símbolo correcto según el país
+    const country = localStorage.getItem('userCountry') || 'CO';
+    const currency = this.currencySymbol();
+
+    // Formatear según el país
+    const localeMap: Record<string, string> = {
+      'CO': 'es-CO',
+      'PE': 'es-PE',
+      'EC': 'es-EC',
+      'MX': 'es-MX'
+    };
+
+    const locale = localeMap[country] || 'es-CO';
+
+    // Para valores muy pequeños, mostrar más decimales
+    const minDigits = price < 1 ? 4 : 2;
+    const maxDigits = price < 1 ? 4 : 2;
+
+    const numberFormatted = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: minDigits,
+      maximumFractionDigits: maxDigits
+    }).format(price);
+
+    // Unir el número con el código de moneda (por ejemplo, "1,234.00 COP")
+    return `${numberFormatted} ${currency}`;
+  }
 
   vendedores = signal<{ value: string; labelKey: string }[]>([]);
 
@@ -145,7 +175,7 @@ export class SalesReport implements OnInit {
   
     return [
       {
-        name: 'Ventas',
+        name: ACTIVE_TRANSLATIONS['salesReportChartSeriesName'] || 'Ventas',
         series: formattedSeries,
       },
     ];
@@ -163,17 +193,16 @@ export class SalesReport implements OnInit {
         const year = parts[0];
         const month = parseInt(parts[1], 10);
         
-        const monthNames: Record<number, string> = {
-          1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
-          7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
-        };
+        // Obtener nombres de meses desde las traducciones
+        const monthKey = `salesReportMonth${month}`;
+        const monthName = ACTIVE_TRANSLATIONS[monthKey] || month.toString();
 
         if (periodType === 'anual' || periodType === 'semestral') {
           // Mostrar mes y año: "Oct 2025"
-          return `${monthNames[month] || month} ${year}`;
+          return `${monthName} ${year}`;
         } else if (periodType === 'trimestral' || periodType === 'bimestral') {
           // Mostrar mes: "Oct"
-          return monthNames[month] || periodo;
+          return monthName;
         }
       }
     }
@@ -187,13 +216,13 @@ export class SalesReport implements OnInit {
     
     const periodType = data.period_type;
     const periodLabels: Record<string, string> = {
-      'bimestral': 'Desglose por meses',
-      'trimestral': 'Desglose por meses',
-      'semestral': 'Desglose por meses',
-      'anual': 'Desglose por meses'
+      'bimestral': ACTIVE_TRANSLATIONS['salesReportChartSubtitle'] || 'Desglose por meses',
+      'trimestral': ACTIVE_TRANSLATIONS['salesReportChartSubtitle'] || 'Desglose por meses',
+      'semestral': ACTIVE_TRANSLATIONS['salesReportChartSubtitle'] || 'Desglose por meses',
+      'anual': ACTIVE_TRANSLATIONS['salesReportChartSubtitle'] || 'Desglose por meses'
     };
 
-    return periodLabels[periodType] || 'Desglose temporal';
+    return periodLabels[periodType] || ACTIVE_TRANSLATIONS['salesReportChartSubtitleGeneric'] || 'Desglose temporal';
   }
 
   getChartView(): [number, number] {
@@ -221,17 +250,17 @@ export class SalesReport implements OnInit {
 
   getXAxisLabel(): string {
     const data = this.reportData();
-    if (!data) return 'Período';
+    if (!data) return ACTIVE_TRANSLATIONS['salesReportChartXAxisPeriod'] || 'Período';
     
     const periodType = data.period_type;
     const labels: Record<string, string> = {
-      'bimestral': 'Meses',
-      'trimestral': 'Meses',
-      'semestral': 'Meses',
-      'anual': 'Meses'
+      'bimestral': ACTIVE_TRANSLATIONS['salesReportChartXAxisMonths'] || 'Meses',
+      'trimestral': ACTIVE_TRANSLATIONS['salesReportChartXAxisMonths'] || 'Meses',
+      'semestral': ACTIVE_TRANSLATIONS['salesReportChartXAxisMonths'] || 'Meses',
+      'anual': ACTIVE_TRANSLATIONS['salesReportChartXAxisMonths'] || 'Meses'
     };
 
-    return labels[periodType] || 'Período';
+    return labels[periodType] || ACTIVE_TRANSLATIONS['salesReportChartXAxisPeriod'] || 'Período';
   }
 
   private generatePeriodLabels(periodType: string, dataLength: number): string[] {
@@ -243,48 +272,71 @@ export class SalesReport implements OnInit {
       console.warn(`⚠️ Inconsistencia detectada: ${periodType} esperaba ${expectedLength} puntos, pero recibió ${dataLength}`);
     }
     
+    const weekLabel = ACTIVE_TRANSLATIONS['salesReportWeekLabel'] || 'Semana';
+    const monthLabel = ACTIVE_TRANSLATIONS['salesReportMonthLabel'] || 'Mes';
+    const periodLabel = ACTIVE_TRANSLATIONS['salesReportPeriodLabelGeneric'] || 'Período';
+    
     switch (periodType) {
       case 'bimestral':
         // Bimestral: Desglose por semanas (6-8 semanas en 2 meses)
         for (let i = 0; i < dataLength; i++) {
-          labels.push(`Semana ${i + 1}`);
+          labels.push(`${weekLabel} ${i + 1}`);
         }
         break;
       case 'trimestral':
         // Trimestral: Desglose por semanas (12-13 semanas en 3 meses)
         for (let i = 0; i < dataLength; i++) {
-          labels.push(`Semana ${i + 1}`);
+          labels.push(`${weekLabel} ${i + 1}`);
         }
         break;
       case 'semestral':
         // Semestral: Desglose por meses (6 meses)
         if (dataLength === 6) {
-          const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+          const monthNames = [
+            ACTIVE_TRANSLATIONS['salesReportMonth1'] || 'Ene',
+            ACTIVE_TRANSLATIONS['salesReportMonth2'] || 'Feb',
+            ACTIVE_TRANSLATIONS['salesReportMonth3'] || 'Mar',
+            ACTIVE_TRANSLATIONS['salesReportMonth4'] || 'Abr',
+            ACTIVE_TRANSLATIONS['salesReportMonth5'] || 'May',
+            ACTIVE_TRANSLATIONS['salesReportMonth6'] || 'Jun'
+          ];
           labels.push(...monthNames);
         } else {
           // Si no son exactamente 6, usar genérico
           for (let i = 0; i < dataLength; i++) {
-            labels.push(`Mes ${i + 1}`);
+            labels.push(`${monthLabel} ${i + 1}`);
           }
         }
         break;
       case 'anual':
         // Anual: Desglose por meses (12 meses)
         if (dataLength === 12) {
-          const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
-                             'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+          const monthNames = [
+            ACTIVE_TRANSLATIONS['salesReportMonth1'] || 'Ene',
+            ACTIVE_TRANSLATIONS['salesReportMonth2'] || 'Feb',
+            ACTIVE_TRANSLATIONS['salesReportMonth3'] || 'Mar',
+            ACTIVE_TRANSLATIONS['salesReportMonth4'] || 'Abr',
+            ACTIVE_TRANSLATIONS['salesReportMonth5'] || 'May',
+            ACTIVE_TRANSLATIONS['salesReportMonth6'] || 'Jun',
+            ACTIVE_TRANSLATIONS['salesReportMonth7'] || 'Jul',
+            ACTIVE_TRANSLATIONS['salesReportMonth8'] || 'Ago',
+            ACTIVE_TRANSLATIONS['salesReportMonth9'] || 'Sep',
+            ACTIVE_TRANSLATIONS['salesReportMonth10'] || 'Oct',
+            ACTIVE_TRANSLATIONS['salesReportMonth11'] || 'Nov',
+            ACTIVE_TRANSLATIONS['salesReportMonth12'] || 'Dic'
+          ];
           labels.push(...monthNames);
         } else {
           // Para otros casos, usar genérico
           for (let i = 0; i < dataLength; i++) {
-            labels.push(`Mes ${i + 1}`);
+            labels.push(`${monthLabel} ${i + 1}`);
           }
         }
         break;
       default:
         // Fallback genérico
         for (let i = 0; i < dataLength; i++) {
-          labels.push(`Período ${i + 1}`);
+          labels.push(`${periodLabel} ${i + 1}`);
         }
     }
     
