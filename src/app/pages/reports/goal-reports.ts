@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PageHeader } from '../../shared/page-header/page-header';
 import { CustomSelect } from '../../shared/custom-select/custom-select';
@@ -7,6 +7,7 @@ import { StatusMessage } from '../../shared/status-message/status-message';
 import { TranslatePipe } from '../../shared/pipes/translate.pipe';
 import { SalesReportService, SalesComplianceRequest } from '../../services/sales-report.service';
 import { OfferService } from '../../services/offer.service';
+import { ACTIVE_TRANSLATIONS, currentLangSignal } from '../../shared/lang/lang-store';
 
 @Component({
   selector: 'app-goal-reports',
@@ -39,11 +40,65 @@ export class GoalReports implements OnInit {
     return !this.vendedor() || !this.quarter() || !this.region();
   }
 
+  // Computed signal para obtener el símbolo de moneda según el país
+  currencySymbol = computed(() => {
+    const country = localStorage.getItem('userCountry') || 'CO';
+    const symbols: Record<string, string> = { 'CO': 'COP', 'PE': 'PEN', 'EC': 'USD', 'MX': 'MXN' };
+    return symbols[country] || 'USD';
+  });
+
   constructor(
     private salesReportService: SalesReportService,
     private offerService: OfferService
   ) {
     console.log('🏗️ GoalReports: Componente instanciado');
+  }
+
+  // Función para convertir valores según el país
+  private convertValue(value: number): number {
+    const country = localStorage.getItem('userCountry') || 'CO';
+    
+    // Tasas de conversión actualizadas (octubre 2024)
+    // El backend devuelve valores en pesos colombianos (COP)
+    const rates: Record<string, number> = { 
+      'CO': 1,           // Colombia - Sin conversión (ya está en pesos)
+      'PE': 0.0014,      // Perú - COP a PEN (1 COP ≈ 0.0014 PEN)
+      'EC': 0.00026,     // Ecuador - COP a USD (1 COP ≈ 0.00026 USD)
+      'MX': 0.0047       // México - COP a MXN (1 COP ≈ 0.0047 MXN)
+    };
+    
+    const rate = rates[country] || 1;
+    // No redondear aquí, dejar que el formateo maneje los decimales
+    return value * rate;
+  }
+
+  // Método para formatear precios con decimales apropiados (similar a productos)
+  formatPrice(price: number): string {
+    // Usar el formato de moneda con el símbolo correcto según el país
+    const country = localStorage.getItem('userCountry') || 'CO';
+    const currency = this.currencySymbol();
+
+    // Formatear según el país
+    const localeMap: Record<string, string> = {
+      'CO': 'es-CO',
+      'PE': 'es-PE',
+      'EC': 'es-EC',
+      'MX': 'es-MX'
+    };
+
+    const locale = localeMap[country] || 'es-CO';
+
+    // Para valores muy pequeños, mostrar más decimales
+    const minDigits = price < 1 ? 4 : 2;
+    const maxDigits = price < 1 ? 4 : 2;
+
+    const numberFormatted = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: minDigits,
+      maximumFractionDigits: maxDigits
+    }).format(price);
+
+    // Unir el número con el código de moneda (por ejemplo, "1,234.00 COP")
+    return `${numberFormatted} ${currency}`;
   }
 
   ngOnInit(): void {
@@ -61,7 +116,6 @@ export class GoalReports implements OnInit {
       }
     });
 
-    // Cargar regiones desde OfferService
     this.loadRegions();
   }
 
@@ -77,7 +131,6 @@ export class GoalReports implements OnInit {
         console.log('✅ GoalReports: Regiones cargadas:', this.regionOptions);
       },
       error: () => {
-        // Fallback local
         this.regionOptions = [
           { value: 'norte', labelKey: 'region_norte' },
           { value: 'centro', labelKey: 'region_centro' },
@@ -97,22 +150,16 @@ export class GoalReports implements OnInit {
 
   generarReporte() {
     console.log('🚀 GoalReports: ===== INICIANDO GENERACIÓN DE REPORTE =====');
-    console.log('👤 GoalReports: Vendedor seleccionado:', this.vendedor());
-    console.log('🗓️ GoalReports: Quarter seleccionado:', this.quarter());
-    console.log('🌍 GoalReports: Región seleccionada:', this.region());
-
     this.showMessage.set(false);
     this.reportData.set(null);
 
     if (!this.vendedor() || !this.quarter() || !this.region()) {
-      console.error('❌ GoalReports: Faltan campos requeridos');
       this.messageType.set('error');
       this.messageText.set('goalReportError');
       this.showMessage.set(true);
       return;
     }
 
-    // Capitalizar la primera letra de la región (ej: "pacifico" -> "Pacifico")
     const regionCapitalized = this.region().charAt(0).toUpperCase() + this.region().slice(1).toLowerCase();
 
     const request: SalesComplianceRequest = {
@@ -122,61 +169,53 @@ export class GoalReports implements OnInit {
       year: new Date().getFullYear(),
     };
 
-    console.log('📦 GoalReports: Request que se enviará:', JSON.stringify(request, null, 2));
-    console.log('🔍 GoalReports: vendor_id:', request.vendor_id);
-    console.log('🔍 GoalReports: region:', request.region);
-    console.log('🔍 GoalReports: quarter:', request.quarter);
-    console.log('🔍 GoalReports: year:', request.year);
-    console.log('🚀 GoalReports: Enviando request a sales-compliance...');
+    console.log('📦 GoalReports: Request:', JSON.stringify(request, null, 2));
 
     this.salesReportService.getSalesCompliance(request).subscribe({
       next: (response) => {
-        console.log('✅ GoalReports: ===== REPORTE DE CUMPLIMIENTO RECIBIDO =====');
-        console.log('📋 GoalReports: Response completa:', JSON.stringify(response, null, 2));
-        console.log('📊 GoalReports: Periodo del reporte:', response.data?.period_start, '-', response.data?.period_end);
-        console.log('📊 GoalReports: Status del reporte:', response.data?.status);
-        console.log('📊 GoalReports: Cumplimiento total:', response.data?.cumplimiento_total_pct, '%');
-        console.log('✅ GoalReports: ===== REPORTE PROCESADO EXITOSAMENTE =====');
-        this.reportData.set(response.data);
+        console.log('✅ GoalReports: Reporte recibido:', response.data);
+        
+        // Convertir valores monetarios según el país
+        const rawData = response.data || response;
+        const convertedData = {
+          ...rawData,
+          // Convertir ventas totales
+          ventasTotales: this.convertValue(rawData.ventasTotales || 0),
+          // Convertir ventas de región
+          ventas_region: rawData.ventas_region ? this.convertValue(rawData.ventas_region) : rawData.ventas_region,
+          // Convertir meta total
+          total_goal: rawData.total_goal ? this.convertValue(rawData.total_goal) : rawData.total_goal,
+          // Convertir valores en detalle de productos
+          detalle_productos: rawData.detalle_productos ? rawData.detalle_productos.map((producto: any) => ({
+            ...producto,
+            ventas: this.convertValue(producto.ventas || 0),
+            goal: producto.goal ? this.convertValue(producto.goal) : producto.goal
+          })) : rawData.detalle_productos
+        };
+        
+        this.reportData.set(convertedData);
         this.messageType.set('success');
         this.messageText.set('goalReportSuccess');
         this.showMessage.set(true);
       },
       error: (error) => {
-        console.error('❌ GoalReports: ===== ERROR GENERANDO REPORTE =====');
-        console.error('📊 GoalReports: Status HTTP:', error.status || 'Desconocido');
-        console.error('📋 GoalReports: Mensaje de error:', error.message || 'Sin mensaje');
-        console.error('🔍 GoalReports: Error completo:', error);
-        console.error('📦 GoalReports: Request que falló:', JSON.stringify(request, null, 2));
-        
-        // Extraer información del error del backend si está disponible
+        console.error('❌ GoalReports: Error:', error);
         const errorMessage = error?.error?.message || error?.message || '';
         const errorType = error?.error?.error_type || '';
         const errorStatus = error?.status || 0;
-        
-        console.error('📋 GoalReports: Mensaje del backend:', errorMessage);
-        console.error('📋 GoalReports: Tipo de error:', errorType);
-        console.error('📋 GoalReports: Status HTTP:', errorStatus);
-        console.error('❌ GoalReports: ===== ERROR PROCESADO =====');
-        
+
         this.messageType.set('error');
-        
-        // Manejar diferentes tipos de errores
-        // Verificar primero por tipo de error específico
-        if (errorType === 'region_mismatch' || errorMessage.toLowerCase().includes('región') || errorMessage.toLowerCase().includes('region')) {
-          // Error específico de región - mostrar mensaje más descriptivo
+
+        if (errorType === 'region_mismatch' || errorMessage.toLowerCase().includes('región')) {
           this.messageText.set('goalReportRegionError');
         } else if (errorType === 'not_found' || errorStatus === 404) {
-          // Error de no encontrado (plan, datos, etc.)
           this.messageText.set('goalReportNoData');
-        } else if (errorMessage.toLowerCase().includes('plan') || errorMessage.toLowerCase().includes('plan de venta')) {
-          // Error relacionado con plan de venta no encontrado
+        } else if (errorMessage.toLowerCase().includes('plan')) {
           this.messageText.set('goalReportNoData');
         } else {
-          // Error genérico
           this.messageText.set('goalReportError');
         }
-        
+
         this.showMessage.set(true);
         this.reportData.set(null);
       },
@@ -198,107 +237,129 @@ export class GoalReports implements OnInit {
   getStatusColor(status: string): string {
     if (status === 'verde') return 'green';
     if (status === 'amarillo') return 'yellow';
+    if (status === 'gris') return 'gray';
     return 'red';
   }
 
   getStatusLabel(status: string): string {
-    if (status === 'verde') return 'Cumplido';
-    if (status === 'amarillo') return 'En progreso';
-    return 'Sin cumplir';
+    if (status === 'verde') return ACTIVE_TRANSLATIONS['goalReportStatusCompleted'] || 'Cumplido';
+    if (status === 'amarillo') return ACTIVE_TRANSLATIONS['goalReportStatusInProgress'] || 'En progreso';
+    if (status === 'rojo') return ACTIVE_TRANSLATIONS['goalReportStatusNotCompleted'] || 'Sin cumplir';
+    if (status === 'gris') return ACTIVE_TRANSLATIONS['goalReportStatusNoGoal'] || 'Sin meta';
+    return '';
   }
 
-  // Obtener el status para Producto (basado en detalle_productos)
+  // --- NUEVA LÓGICA: Calcula el status del producto basado en el porcentaje visualizado ---
+  getProductCalculatedStatus(product: any): string {
+    // 1. Primero verificamos si tiene meta
+    const goal = product.goal ?? 0;
+    
+    // Si la meta es 0 o nula, devolvemos estado neutro
+    if (goal === 0) {
+      return 'gris';
+    }
+
+    // 2. Si tiene meta, calculamos el porcentaje
+    const pct = this.getProductCumplimientoPct(product);
+    
+    if (pct >= 100) return 'verde';
+    if (pct >= 60) return 'amarillo';
+    return 'rojo';
+  }
+
+  // Actualizado para usar el status calculado, no el del backend
   getProductStatus(): string {
     const data = this.reportData();
     if (!data || !data.detalle_productos || data.detalle_productos.length === 0) {
       return 'rojo';
     }
-    // Contar cuántos productos tienen cada status
     const statusCounts: { [key: string]: number } = {};
     data.detalle_productos.forEach((p: any) => {
-      const status = p.status || 'rojo';
+      // Usamos la nueva función de cálculo local
+      const status = this.getProductCalculatedStatus(p);
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
-    // Retornar el status más común, priorizando verde > amarillo > rojo
     if (statusCounts['verde'] && statusCounts['verde'] > 0) return 'verde';
     if (statusCounts['amarillo'] && statusCounts['amarillo'] > 0) return 'amarillo';
     return 'rojo';
   }
 
-  // Obtener el status para Región
   getRegionStatus(): string {
-    const data = this.reportData();
-    if (!data) return 'rojo';
-    // Usar status_region si está disponible, sino usar el status general
-    return data.status_region || data.status || 'rojo';
+    const pct = this.getCumplimientoRegionPct();
+    if (pct >= 100) return 'verde';
+    if (pct >= 60) return 'amarillo';
+    return 'rojo';
   }
 
-  // Obtener el status para Total (usar el status del data principal)
   getTotalStatus(): string {
-    const data = this.reportData();
-    if (!data) return 'rojo';
-    return data.status || 'rojo';
+    const pct = this.getCumplimientoTotalPct();
+    if (pct >= 100) return 'verde';
+    if (pct >= 60) return 'amarillo';
+    return 'rojo';
   }
 
   formatNumber(value: number): string {
-    return new Intl.NumberFormat('es-CO').format(value);
+    const lang = currentLangSignal();
+    const localeMap: Record<string, string> = {
+      'es': 'es-CO',
+      'en': 'en-US'
+    };
+    const locale = localeMap[lang] || 'es-CO';
+    return new Intl.NumberFormat(locale).format(value);
   }
 
-  // Obtener el porcentaje de cumplimiento total
-  // El backend devuelve el porcentaje directamente (ej: 11.04 = 11.04%)
   getCumplimientoTotalPct(): number {
     const data = this.reportData();
-    if (!data || data.cumplimiento_total_pct === undefined || data.cumplimiento_total_pct === null) {
-      return 0;
-    }
-    // El backend ya devuelve el porcentaje directamente, no necesita conversión
-    return data.cumplimiento_total_pct;
+    if (!data) return 0;
+
+    const sales = data.ventasTotales || 0;
+    const goal = data.total_goal || 0;
+
+    if (goal === 0) return 0;
+    return (sales / goal) * 100;
   }
 
-  // Obtener el porcentaje de cumplimiento de región
   getCumplimientoRegionPct(): number {
     const data = this.reportData();
-    if (!data || data.cumplimiento_region_pct === undefined || data.cumplimiento_region_pct === null) {
-      // Si no hay cumplimiento_region_pct, calcular basado en ventas_region y total_goal
-      if (data?.ventas_region && data?.total_goal) {
-        const metaRegionMonetaria = (data.total_goal || 0) * 100;
-        if (!metaRegionMonetaria) {
-          return 0;
-        }
-        return (data.ventas_region / metaRegionMonetaria) * 100;
-      }
-      return 0;
+    if (!data) return 0;
+
+    if (data.ventas_region && data.total_goal) {
+      const metaRegion = data.total_goal || 0;
+      if (metaRegion === 0) return 0;
+      return (data.ventas_region / metaRegion) * 100;
     }
-    return data.cumplimiento_region_pct;
+
+    return data.cumplimiento_region_pct || 0;
   }
 
-  // Obtener el porcentaje de cumplimiento de un producto
-  // cumplimiento_pct viene listo para mostrarse como porcentaje (ej: 16.8 = 16.8%)
   getProductCumplimientoPct(product: any): number {
-    if (!product || product.cumplimiento_pct === undefined || product.cumplimiento_pct === null) {
-      return 0;
-    }
-    return product.cumplimiento_pct;
+    if (!product) return 0;
+
+    const sales = product.ventas || 0;
+    const goal = product.goal || 0;
+
+    if (goal === 0) return 0;
+    return (sales / goal) * 100;
   }
 
-  // Obtener los productos del detalle
   getDetalleProductos(): any[] {
     const data = this.reportData();
-    if (!data || !data.detalle_productos || !Array.isArray(data.detalle_productos)) {
-      return [];
-    }
+    if (!data || !data.detalle_productos) return [];
     return data.detalle_productos;
   }
 
-  // Formatear fecha
   formatDate(dateString: string): string {
     if (!dateString) return '';
     try {
-      // Parsear la fecha como UTC para evitar problemas de zona horaria
-      // El formato del backend es "YYYY-MM-DD"
       const [year, month, day] = dateString.split('-').map(Number);
       const date = new Date(Date.UTC(year, month - 1, day));
-      return new Intl.DateTimeFormat('es-CO', {
+      const lang = currentLangSignal();
+      const localeMap: Record<string, string> = {
+        'es': 'es-CO',
+        'en': 'en-US'
+      };
+      const locale = localeMap[lang] || 'es-CO';
+      return new Intl.DateTimeFormat(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -309,7 +370,6 @@ export class GoalReports implements OnInit {
     }
   }
 
-  // Calcular métricas agregadas desde detalle_productos
   getAggregatedMetrics() {
     const data = this.reportData();
     if (!data || !data.detalle_productos) {
@@ -321,24 +381,20 @@ export class GoalReports implements OnInit {
     }
 
     const productos = data.detalle_productos;
-    const productosConMeta = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
+    const productosConMeta = productos.filter((p: any) => (p.goal ?? 0) > 0);
     const hayProductosConMeta = productosConMeta.length > 0;
 
-    // Para la métrica "Producto", usar sólo los productos con meta definida
     const productoAchieved = hayProductosConMeta
       ? productosConMeta.reduce((sum: number, p: any) => sum + (p.ventas || 0), 0)
       : (data.ventasTotales || 0);
+
     const productoGoal = hayProductosConMeta
-      ? productosConMeta.reduce((sum: number, p: any) => sum + ((p.goal_vendor ?? p.goal ?? 0) * 100), 0)
-      : (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
-    
-    // Para región, usar ventas_region si está disponible
+      ? productosConMeta.reduce((sum: number, p: any) => sum + (p.goal ?? 0), 0)
+      : (data.total_goal ?? 0);
+
     const regionAchieved = data.ventas_region || data.ventasTotales || 0;
-    // Meta regional (centenas -> moneda)
-    const regionGoal = (data.total_goal || 0) * 100;
-    
-    // Meta individual del vendedor (centenas -> moneda)
-    const totalGoal = (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
+    const regionGoal = (data.total_goal || 0);
+    const totalGoal = (data.total_goal ?? 0);
 
     return {
       producto: { achieved: productoAchieved, goal: productoGoal },
@@ -347,31 +403,25 @@ export class GoalReports implements OnInit {
     };
   }
 
-  // Obtener resumen estadístico
   getSummaryStats() {
     const data = this.reportData();
     if (!data || !data.detalle_productos) {
       return {
-        totalProducts: 0,
-        productsWithGoal: 0,
-        productsWithoutGoal: 0,
-        productsCompleted: 0,
-        productsInProgress: 0,
-        productsNotCompleted: 0,
-        totalSales: 0,
-        totalGoal: 0,
-        difference: 0
+        totalProducts: 0, productsWithGoal: 0, productsWithoutGoal: 0,
+        productsCompleted: 0, productsInProgress: 0, productsNotCompleted: 0,
+        totalSales: 0, totalGoal: 0, difference: 0
       };
     }
-
     const productos = data.detalle_productos;
-    const productsWithGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
-    const productsWithoutGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) === 0);
-    const productsCompleted = productos.filter((p: any) => p.status === 'verde');
-    const productsInProgress = productos.filter((p: any) => p.status === 'amarillo');
-    const productsNotCompleted = productos.filter((p: any) => p.status === 'rojo');
+    const productsWithGoal = productos.filter((p: any) => (p.goal ?? 0) > 0);
+    const productsWithoutGoal = productos.filter((p: any) => (p.goal ?? 0) === 0);
 
-    const totalGoalVendorConverted = (data.total_goal_vendor ?? data.total_goal ?? 0) * 100;
+    // Actualizado para usar el status calculado localmente
+    const productsCompleted = productos.filter((p: any) => this.getProductCalculatedStatus(p) === 'verde');
+    const productsInProgress = productos.filter((p: any) => this.getProductCalculatedStatus(p) === 'amarillo');
+    const productsNotCompleted = productos.filter((p: any) => this.getProductCalculatedStatus(p) === 'rojo');
+
+    const totalGoal = (data.total_goal ?? 0);
 
     return {
       totalProducts: productos.length,
@@ -381,52 +431,30 @@ export class GoalReports implements OnInit {
       productsInProgress: productsInProgress.length,
       productsNotCompleted: productsNotCompleted.length,
       totalSales: data.ventasTotales || 0,
-      totalGoal: totalGoalVendorConverted,
-      difference: (data.ventasTotales || 0) - totalGoalVendorConverted
+      totalGoal: totalGoal,
+      difference: (data.ventasTotales || 0) - totalGoal
     };
   }
 
-  // Obtener el status predominante de los productos con meta
-  // Retorna 'verde', 'amarillo' o 'rojo' basado en el status de los productos con meta
   getProductsWithGoalStatus(): string {
     const data = this.reportData();
-    if (!data || !data.detalle_productos) {
-      return 'rojo';
-    }
-
+    if (!data || !data.detalle_productos) return 'rojo';
     const productos = data.detalle_productos;
-    const productsWithGoal = productos.filter((p: any) => (p.goal_vendor ?? p.goal ?? 0) > 0);
-    
-    if (productsWithGoal.length === 0) {
-      return 'rojo';
-    }
-
-    // Contar cuántos productos con meta tienen cada status
+    const productsWithGoal = productos.filter((p: any) => (p.goal ?? 0) > 0);
+    if (productsWithGoal.length === 0) return 'rojo';
     const statusCounts: { [key: string]: number } = {};
     productsWithGoal.forEach((p: any) => {
-      const status = p.status || 'rojo';
+      // Actualizado para usar status calculado localmente
+      const status = this.getProductCalculatedStatus(p);
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
-
-    // Priorizar: verde > amarillo > rojo
-    // Si todos están en verde, retornar verde
-    // Si hay alguno en verde, retornar verde
-    // Si hay alguno en amarillo (y no hay verdes), retornar amarillo
-    // Si todos están en rojo, retornar rojo
-    if (statusCounts['verde'] && statusCounts['verde'] > 0) {
-      return 'verde';
-    }
-    if (statusCounts['amarillo'] && statusCounts['amarillo'] > 0) {
-      return 'amarillo';
-    }
+    if (statusCounts['verde'] && statusCounts['verde'] > 0) return 'verde';
+    if (statusCounts['amarillo'] && statusCounts['amarillo'] > 0) return 'amarillo';
     return 'rojo';
   }
 
-  // Ordenar productos (por defecto por product_id, pero se puede cambiar)
   getDetalleProductosSorted(): any[] {
     const productos = this.getDetalleProductos();
-    // Ordenar por product_id ascendente
     return [...productos].sort((a, b) => (a.product_id || 0) - (b.product_id || 0));
   }
 }
-

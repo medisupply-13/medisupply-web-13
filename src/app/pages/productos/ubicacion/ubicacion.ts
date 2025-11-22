@@ -562,7 +562,16 @@ export class UbicacionComponent implements OnInit {
         console.warn('⚠️ Ubicacion: Fecha inválida:', dateString);
         return '';
       }
-      return date.toLocaleDateString('es-ES', {
+      
+      // Usar el locale según el idioma actual
+      const lang = currentLangSignal();
+      const localeMap: Record<string, string> = {
+        'es': 'es-ES',
+        'en': 'en-US'
+      };
+      const locale = localeMap[lang] || 'es-ES';
+      
+      return date.toLocaleDateString(locale, {
         day: '2-digit',
         month: 'short',
         year: 'numeric'

@@ -18,6 +18,24 @@
 
   <!-- Sección de carga de archivos -->
   <div class="upload-section" *ngIf="showUploadSection()">
+    <!-- Botón para agregar vendedor individual -->
+    <div class="individual-seller-section">
+      <button 
+        mat-flat-button 
+        color="primary" 
+        (click)="addSeller()"
+        [disabled]="isLoading()"
+        class="add-seller-button">
+        <mat-icon>person_add</mat-icon>
+        {{ 'addSellerButton' | translate }}
+      </button>
+      <mat-progress-bar 
+        *ngIf="isLoading()"
+        mode="indeterminate"
+        class="seller-progress-bar">
+      </mat-progress-bar>
+    </div>
+
     <mat-card class="template-section">
       <mat-card-header>
         <mat-card-title>

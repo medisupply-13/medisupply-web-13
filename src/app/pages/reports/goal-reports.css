@@ -368,3 +368,13 @@
   font-weight: 700;
 }
 
+.status-gris {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+/* Asegúrate de que las otras clases existan también */
+.status-verde { background-color: #d1fae5; color: #065f46; }
+.status-amarillo { background-color: #fef3c7; color: #92400e; }
+.status-rojo { background-color: #fee2e2; color: #b91c1c; }

@@ -187,11 +187,17 @@ export class UserRegistration implements OnInit {
             }
           );
         } else {
+          // Mostrar los primeros 3 errores en el mensaje
+          const firstErrors = validationResult.errors.slice(0, 3);
+          const errorMessage = firstErrors.length === validationResult.errors.length
+            ? `¡Ups! Errores: ${firstErrors.join('; ')}`
+            : `¡Ups! Errores: ${firstErrors.join('; ')} (y ${validationResult.errors.length - firstErrors.length} más)`;
+          
           this.snackBar.open(
-            '¡Ups! El archivo tiene errores de validación, revisa y sube nuevamente',
+            errorMessage,
             this.translate('closeButton') || 'Cerrar',
             {
-              duration: 5000,
+              duration: 8000,
               horizontalPosition: 'end',
               verticalPosition: 'top'
             }

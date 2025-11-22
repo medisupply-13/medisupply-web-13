@@ -18,6 +18,24 @@
 
   <!-- Sección de carga de archivos -->
   <div class="upload-section" *ngIf="showUploadSection()">
+    <!-- Botón para agregar proveedor individual -->
+    <div class="individual-provider-section">
+      <button 
+        mat-flat-button 
+        color="primary" 
+        (click)="addProvider()"
+        [disabled]="isLoading()"
+        class="add-provider-button">
+        <mat-icon>add_business</mat-icon>
+        {{ 'addProviderButton' | translate }}
+      </button>
+      <mat-progress-bar 
+        *ngIf="isLoading()"
+        mode="indeterminate"
+        class="provider-progress-bar">
+      </mat-progress-bar>
+    </div>
+
     <mat-card class="template-section">
       <mat-card-header>
         <mat-card-title>

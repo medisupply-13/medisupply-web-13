@@ -5,11 +5,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { PageHeader } from '../../../shared/page-header/page-header';
 import { StatusMessage } from '../../../shared/status-message/status-message';
 import { TranslatePipe } from '../../../shared/pipes/translate.pipe';
 import { Router } from '@angular/router';
-import { SellerValidationService, ValidationResult } from '../../../services/seller-validation.service';
+import { SellerValidationService, ValidationResult, SellerTemplate } from '../../../services/seller-validation.service';
+import { AddSellerDialog } from './add-seller-dialog.component';
+import { ValidationErrorDialog } from './validation-error-dialog.component';
 import { ACTIVE_TRANSLATIONS } from '../../../shared/lang/lang-store';
 
 interface UploadedFile {
@@ -31,6 +34,7 @@ interface UploadedFile {
     MatCardModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    MatDialogModule,
     PageHeader,
     StatusMessage,
     TranslatePipe
@@ -55,7 +59,9 @@ export class SellerRegistration implements OnInit {
 
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
   private sellerValidationService = inject(SellerValidationService);
+  isLoading = signal(false);
 
   /**
    * Obtiene una traducción por su clave
@@ -345,6 +351,141 @@ export class SellerRegistration implements OnInit {
 
   get validFilesCount(): number {
     return this.uploadedFiles().filter(file => file.isValid).length;
+  }
+
+  /**
+   * Abre el diálogo para agregar un vendedor individual
+   */
+  addSeller(): void {
+    const dialogRef = this.dialog.open(AddSellerDialog, {
+      width: '600px',
+      disableClose: false,
+      data: {
+        zones: [] // Puedes pasar zonas disponibles aquí si las tienes
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((sellerData: SellerTemplate | undefined) => {
+      if (sellerData) {
+        this.createSeller(sellerData);
+      }
+    });
+  }
+
+  /**
+   * Crea un vendedor individual con validación del backend
+   */
+  private async createSeller(sellerData: SellerTemplate): Promise<void> {
+    this.isLoading.set(true);
+
+    console.log('🔍 SellerRegistration: Validando vendedor antes de insertar...');
+    console.log('📦 SellerRegistration: Datos a validar:', JSON.stringify(sellerData, null, 2));
+
+    try {
+      // PRIMERO: Validar el vendedor usando el mismo endpoint que CSV masivo
+      const validationResult = await this.sellerValidationService.validateSingleSeller(sellerData);
+
+      if (!validationResult.isValid) {
+        // Mostrar errores de validación en un diálogo modal que no se cierre automáticamente
+        console.error('❌ SellerRegistration: Errores de validación:', validationResult.errors);
+        this.isLoading.set(false);
+
+        const errorMessages = validationResult.errors.length > 0 
+          ? validationResult.errors 
+          : ['Error de validación desconocido'];
+
+        // Abrir diálogo modal con errores y warnings
+        this.dialog.open(ValidationErrorDialog, {
+          width: '500px',
+          disableClose: false,
+          data: {
+            title: this.translate('sellerValidationErrorsTitle') || 'Errores de Validación del Vendedor',
+            errors: errorMessages,
+            warnings: validationResult.warnings.length > 0 ? validationResult.warnings : undefined
+          },
+          autoFocus: true,
+          restoreFocus: true
+        });
+
+        return;
+      }
+
+      // Si hay warnings pero es válido, mostrarlos
+      if (validationResult.warnings.length > 0) {
+        console.warn('⚠️ SellerRegistration: Advertencias de validación:', validationResult.warnings);
+        this.snackBar.open(
+          `Advertencias: ${validationResult.warnings.join('; ')}`,
+          this.translate('closeButton') || 'Cerrar',
+          {
+            duration: 3000,
+            horizontalPosition: 'end',
+            verticalPosition: 'top'
+          }
+        );
+      }
+
+      // Usar el vendedor validado del backend si está disponible, sino el original
+      const sellerToInsert = validationResult.data && validationResult.data.length > 0 
+        ? validationResult.data[0] 
+        : sellerData;
+
+      console.log('✅ SellerRegistration: Validación exitosa, insertando vendedor...');
+      console.log('📦 SellerRegistration: Vendedor a insertar:', JSON.stringify(sellerToInsert, null, 2));
+
+      // SEGUNDO: Insertar el vendedor usando insertValidatedSellers para consistencia
+      const sellersToInsert = [sellerToInsert];
+      await this.sellerValidationService.insertValidatedSellers(sellersToInsert, 'individual');
+
+      this.isLoading.set(false);
+      console.log('✅ SellerRegistration: Vendedor creado exitosamente');
+      this.snackBar.open(
+        this.translate('sellerCreatedSuccess') || 'Vendedor creado exitosamente',
+        this.translate('closeButton') || 'Cerrar',
+        {
+          duration: 3000,
+          horizontalPosition: 'end',
+          verticalPosition: 'top'
+        }
+      );
+
+    } catch (error: any) {
+      console.error('❌ SellerRegistration: Error al crear vendedor:', error);
+      this.isLoading.set(false);
+
+      const errorMessages: string[] = [];
+
+      // Extraer mensaje de error del response
+      if (error?.error) {
+        if (typeof error.error === 'string') {
+          errorMessages.push(error.error);
+        } else if (error.error.message) {
+          errorMessages.push(error.error.message);
+        } else if (error.error.errors && Array.isArray(error.error.errors)) {
+          errorMessages.push(...error.error.errors);
+        } else if (error.error.error) {
+          errorMessages.push(error.error.error);
+        } else {
+          errorMessages.push(JSON.stringify(error.error));
+        }
+      } else if (error?.message) {
+        errorMessages.push(error.message);
+      } else {
+        errorMessages.push(this.translate('sellerCreationError') || 'Error al crear el vendedor');
+      }
+
+      // Mostrar errores en un popup en lugar de snackbar
+      this.dialog.open(ValidationErrorDialog, {
+        width: '500px',
+        disableClose: false,
+        data: {
+          title: this.translate('sellerCreationErrorTitle') || 'Error al Crear Vendedor',
+          errors: errorMessages.length > 0 ? errorMessages : [this.translate('sellerCreationError') || 'Error desconocido al crear el vendedor'],
+          warnings: undefined
+        },
+        autoFocus: true,
+        restoreFocus: true
+      });
+    }
   }
 }
 

@@ -42,7 +42,7 @@
     <div class="summary">
       <div class="box">
         <h3>{{ 'salesReportTotalSales' | translate }}</h3>
-        <p>{{ reportData().ventasTotales | currency:currencySymbol():'symbol':'1.0-0' }}</p>
+        <p>{{ formatPrice(reportData().ventasTotales) }}</p>
       </div>
       <div class="box">
         <h3>{{ 'salesReportOrders' | translate }}</h3>
@@ -60,7 +60,7 @@
       <tbody>
         <tr *ngFor="let p of reportData().productos; trackBy: trackByProduct">
           <td>{{ p.nombre }}</td>
-          <td>{{ p.ventas | currency:currencySymbol():'symbol':'1.0-0' }}</td>
+          <td>{{ formatPrice(p.ventas) }}</td>
         </tr>
       </tbody>
     </table>

@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
+import { isValidEmail } from '../utils/email-validator';
+import { validatePassword } from '../utils/password-validator';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -174,6 +176,167 @@ export class SellerValidationService {
 
     } catch (error) {
       console.error('Error al validar vendedores en el backend:', error);
+      errors.push('No se pudo conectar con el servidor para validación');
+      return { isValid: false, errors, warnings };
+    }
+  }
+
+  /**
+   * Valida un solo vendedor usando el mismo endpoint de validación masiva
+   * Útil para validar vendedores individuales antes de insertarlos
+   */
+  async validateSingleSeller(seller: SellerTemplate): Promise<ValidationResult> {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    try {
+      // Convertir el vendedor a array para usar el mismo endpoint
+      const sellersArray = [seller];
+      const jsonPayload = JSON.stringify(sellersArray);
+
+      console.log('🔍 SellerValidationService: Validando vendedor individual');
+      console.log('📦 Vendedor a validar:', JSON.stringify(seller, null, 2));
+      console.log('🌐 URL:', `${this.api}users/sellers/upload/validate`);
+
+      const response = await fetch(`${this.api}users/sellers/upload/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: jsonPayload
+      });
+
+      console.log('📊 SellerValidationService: Status de respuesta:', response.status);
+
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error('❌ SellerValidationService: Error en validación:', responseText);
+
+        try {
+          const errorJson = JSON.parse(responseText);
+          
+          // Buscar errores específicos primero
+          if (errorJson.errors && Array.isArray(errorJson.errors)) {
+            // Filtrar mensajes genéricos de archivo
+            const specificErrors = errorJson.errors.filter((err: string) => {
+              const lowerErr = err.toLowerCase();
+              return !lowerErr.includes('¡ups! el archivo tiene errores de validación') &&
+                     !lowerErr.includes('revisa y sube nuevamente') &&
+                     !lowerErr.includes('el archivo tiene errores');
+            });
+            
+            if (specificErrors.length > 0) {
+              errors.push(...specificErrors);
+            } else if (errorJson.detailed_errors && Array.isArray(errorJson.detailed_errors)) {
+              errors.push(...errorJson.detailed_errors);
+            } else if (errorJson.validation_errors && Array.isArray(errorJson.validation_errors)) {
+              errors.push(...errorJson.validation_errors);
+            } else {
+              // Limpiar mensajes genéricos
+              errors.push(...errorJson.errors.map((err: string) => 
+                err.replace(/archivo/gi, 'vendedor').replace(/sube nuevamente/gi, 'intenta nuevamente')
+              ));
+            }
+          } else if (errorJson.error) {
+            errors.push(typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error));
+          } else if (errorJson.message) {
+            const message = errorJson.message.toLowerCase();
+            // Filtrar mensajes genéricos
+            if (!message.includes('¡ups! el archivo tiene errores de validación') &&
+                !message.includes('revisa y sube nuevamente')) {
+              errors.push(errorJson.message);
+            }
+          } else {
+            errors.push(`Error del backend: ${responseText}`);
+          }
+        } catch {
+          errors.push(`Error del backend (${response.status}): ${responseText}`);
+        }
+
+        return { isValid: false, errors, warnings };
+      }
+
+      // Leer respuesta exitosa
+      const result = await response.json();
+      console.log('✅ SellerValidationService: Respuesta de validación completa:', JSON.stringify(result, null, 2));
+
+      // Procesar errores - buscar en múltiples lugares donde el backend podría ponerlos
+      let allErrors: string[] = [];
+      
+      // Buscar errores en diferentes campos del response
+      if (result.errors && Array.isArray(result.errors)) {
+        allErrors.push(...result.errors);
+      }
+      if (result.detailed_errors && Array.isArray(result.detailed_errors)) {
+        allErrors.push(...result.detailed_errors);
+      }
+      if (result.validation_errors && Array.isArray(result.validation_errors)) {
+        allErrors.push(...result.validation_errors);
+      }
+      if (result.error && typeof result.error === 'string') {
+        allErrors.push(result.error);
+      }
+      
+      // Buscar errores por índice si hay validaciones por vendedor
+      if (result.invalid_records && Array.isArray(result.invalid_records)) {
+        result.invalid_records.forEach((record: any, index: number) => {
+          if (record.errors && Array.isArray(record.errors)) {
+            allErrors.push(...record.errors);
+          }
+          if (record.error) {
+            allErrors.push(record.error);
+          }
+          if (record.message) {
+            allErrors.push(record.message);
+          }
+        });
+      }
+      
+      // Filtrar mensajes genéricos de archivo cuando es validación individual
+      const specificErrors = allErrors.filter((err: string) => {
+        const lowerErr = err.toLowerCase();
+        // Filtrar mensajes genéricos que mencionan "archivo" o "sube nuevamente"
+        return !lowerErr.includes('¡ups! el archivo tiene errores de validación') &&
+               !lowerErr.includes('revisa y sube nuevamente') &&
+               !lowerErr.includes('el archivo tiene errores') &&
+               !lowerErr.includes('el archivo excede') &&
+               !lowerErr.includes('formato del archivo');
+      });
+      
+      if (specificErrors.length > 0) {
+        errors.push(...specificErrors);
+      } else if (allErrors.length > 0) {
+        // Si solo hay mensajes genéricos, limpiarlos y adaptarlos
+        errors.push(...allErrors.map((err: string) => 
+          err.replace(/archivo/gi, 'vendedor')
+             .replace(/sube nuevamente/gi, 'intenta nuevamente')
+             .replace(/el vendedor tiene errores de validación/gi, 'Error de validación')
+        ));
+      }
+      
+      console.log('🔍 SellerValidationService: Errores específicos encontrados:', errors);
+
+      // Procesar warnings
+      if (result.warnings && result.warnings.length > 0) {
+        warnings.push(...result.warnings);
+      }
+
+      // Obtener vendedor validado del backend si está disponible
+      const validatedSellers = result.validated_sellers && result.validated_sellers.length > 0 
+        ? result.validated_sellers 
+        : (result.data && result.data.length > 0 
+          ? result.data 
+          : (errors.length === 0 ? sellersArray : undefined));
+
+      return {
+        isValid: errors.length === 0 && validatedSellers !== undefined,
+        errors,
+        warnings,
+        data: validatedSellers
+      };
+
+    } catch (error) {
+      console.error('❌ SellerValidationService: Error al validar vendedor:', error);
       errors.push('No se pudo conectar con el servidor para validación');
       return { isValid: false, errors, warnings };
     }
@@ -447,17 +610,40 @@ export class SellerValidationService {
     const correoIndex = getHeaderIndex('correo', ['correo', 'email']);
     if (correoIndex !== undefined) {
       const email = rowData[correoIndex]?.trim();
-      if (email && !this.isValidEmail(email)) {
+      if (email && !isValidEmail(email)) {
         errors.push(`Fila ${rowNum}: El correo "${email}" no es válido`);
       }
     }
 
-    // Validar que la contraseña existe
+    // Validar contraseña (mínimo 8 caracteres, mayúscula, minúscula, número y carácter especial)
     const passwordIndex = getHeaderIndex('contraseña', ['contraseña', 'contrasea', 'contrasena', 'password']);
     if (passwordIndex !== undefined) {
       const password = rowData[passwordIndex]?.trim();
       if (!password || password === '') {
         errors.push(`Fila ${rowNum}: contraseña es obligatorio`);
+      } else {
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+          // Construir mensaje de error específico con los requisitos faltantes
+          const missingRequirements = passwordValidation.errors.map(err => {
+            switch(err) {
+              case 'passwordMinLength':
+                return 'mínimo 8 caracteres';
+              case 'passwordUppercase':
+                return 'mayúscula (A-Z)';
+              case 'passwordLowercase':
+                return 'minúscula (a-z)';
+              case 'passwordNumber':
+                return 'número (0-9)';
+              case 'passwordSpecialChar':
+                return 'carácter especial (!@#$%^&*()_+-=[]{}|;:,.<>?)';
+              default:
+                return '';
+            }
+          }).filter(req => req !== '').join(', ');
+          
+          errors.push(`Fila ${rowNum}: La contraseña debe tener ${missingRequirements}`);
+        }
       }
     }
 
@@ -590,9 +776,5 @@ export class SellerValidationService {
     return { correo: duplicateCorreos, identificacion: duplicateIdentificaciones };
   }
 
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  }
 }
 

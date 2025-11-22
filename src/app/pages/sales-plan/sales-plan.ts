@@ -90,7 +90,37 @@ export class SalesPlan {
       'MX': 0.0047       // México - COP a MXN (1 COP ≈ 0.0047 MXN)
     };
     
-    return Math.round(value * (rates[country] || 1));
+    // No redondear aquí, dejar que el formateo maneje los decimales
+    return value * (rates[country] || 1);
+  }
+
+  // Método para formatear precios con decimales apropiados (similar a productos y reportes)
+  formatPrice(price: number): string {
+    // Usar el formato de moneda con el símbolo correcto según el país
+    const country = localStorage.getItem('userCountry') || 'CO';
+    const currency = this.currencySymbol();
+
+    // Formatear según el país
+    const localeMap: Record<string, string> = {
+      'CO': 'es-CO',
+      'PE': 'es-PE',
+      'EC': 'es-EC',
+      'MX': 'es-MX'
+    };
+
+    const locale = localeMap[country] || 'es-CO';
+
+    // Para valores muy pequeños, mostrar más decimales
+    const minDigits = price < 1 ? 4 : 2;
+    const maxDigits = price < 1 ? 4 : 2;
+
+    const numberFormatted = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: minDigits,
+      maximumFractionDigits: maxDigits
+    }).format(price);
+
+    // Unir el número con el código de moneda (por ejemplo, "1,234.00 COP")
+    return `${numberFormatted} ${currency}`;
   }
 
   // Computed signal para obtener el símbolo de moneda según el país

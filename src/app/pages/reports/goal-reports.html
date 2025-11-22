@@ -50,7 +50,6 @@
       </div>
     </div>
 
-    <!-- Información adicional del reporte -->
     <div class="report-info">
       <div class="info-row">
         <div class="info-item">
@@ -68,55 +67,57 @@
       </div>
       <div class="info-row" *ngIf="reportData().region">
         <div class="info-item">
-          <span class="info-label">Región:</span>
+          <span class="info-label">{{ 'goalReportRegionLabel' | translate }}:</span>
           <span class="info-value">{{ reportData().region }}</span>
         </div>
         <div class="info-item" *ngIf="reportData().ventas_region">
-          <span class="info-label">Ventas de la Región:</span>
-          <span class="info-value highlight">{{ formatNumber(reportData().ventas_region) }}</span>
+          <span class="info-label">{{ 'goalReportRegionSales' | translate }}:</span>
+          <span class="info-value highlight">{{ formatPrice(reportData().ventas_region) }}</span>
         </div>
         <div class="info-item" *ngIf="reportData().cumplimiento_region_pct !== undefined">
-          <span class="info-label">Cumplimiento Región:</span>
+          <span class="info-label">{{ 'goalReportRegionCompliance' | translate }}:</span>
           <span class="info-value">{{ getCumplimientoRegionPct() | number:'1.2-2' }}%</span>
         </div>
       </div>
       <div class="info-row" *ngIf="reportData().num_sellers_region || reportData().num_plans_active">
         <div class="info-item" *ngIf="reportData().num_sellers_region">
-          <span class="info-label">Vendedores en la Región:</span>
+          <span class="info-label">{{ 'goalReportSellersInRegion' | translate }}:</span>
           <span class="info-value">{{ reportData().num_sellers_region }}</span>
         </div>
-        <div class="info-item" *ngIf="reportData().total_goal_vendor">
-          <span class="info-label">Meta Individual del Vendedor:</span>
-          <span class="info-value">{{ formatNumber((reportData().total_goal_vendor || 0) * 100) }}</span>
-        </div>
+
         <div class="info-item" *ngIf="reportData().total_goal">
-          <span class="info-label">Meta Total Región:</span>
-          <span class="info-value">{{ formatNumber((reportData().total_goal || 0) * 100) }}</span>
+          <span class="info-label">{{ 'goalReportIndividualVendorGoal' | translate }}:</span>
+          <span class="info-value">{{ formatPrice(reportData().total_goal || 0) }}</span>
         </div>
+
+        <div class="info-item" *ngIf="reportData().total_goal">
+          <span class="info-label">{{ 'goalReportTotalRegionGoal' | translate }}:</span>
+          <span class="info-value">{{ formatPrice(reportData().total_goal || 0) }}</span>
+        </div>
+
         <div class="info-item" *ngIf="reportData().num_plans_active">
-          <span class="info-label">Planes Activos:</span>
+          <span class="info-label">{{ 'goalReportActivePlans' | translate }}:</span>
           <span class="info-value">{{ reportData().num_plans_active }}</span>
         </div>
       </div>
       <div class="info-row">
         <div class="info-item">
           <span class="info-label">{{ 'goalReportTotalSales' | translate }}:</span>
-          <span class="info-value highlight">{{ formatNumber(getSummaryStats().totalSales) }}</span>
+          <span class="info-value highlight">{{ formatPrice(getSummaryStats().totalSales) }}</span>
         </div>
         <div class="info-item">
           <span class="info-label">{{ 'goalReportTotalGoal' | translate }}:</span>
-          <span class="info-value">{{ formatNumber(getSummaryStats().totalGoal) }}</span>
+          <span class="info-value">{{ formatPrice(getSummaryStats().totalGoal) }}</span>
         </div>
         <div class="info-item">
           <span class="info-label">{{ 'goalReportDifference' | translate }}:</span>
           <span class="info-value" [class.positive]="getSummaryStats().difference >= 0" [class.negative]="getSummaryStats().difference < 0">
-            {{ getSummaryStats().difference >= 0 ? '+' : '' }}{{ formatNumber(getSummaryStats().difference) }}
+            {{ getSummaryStats().difference >= 0 ? '+' : '' }}{{ formatPrice(getSummaryStats().difference >= 0 ? getSummaryStats().difference : -getSummaryStats().difference) }}
           </span>
         </div>
       </div>
     </div>
 
-    <!-- Resumen estadístico -->
     <div class="summary-stats" *ngIf="getDetalleProductos().length > 0">
       <h3 class="section-title-small">{{ 'goalReportSummary' | translate }}</h3>
       <div class="stats-grid">
@@ -152,12 +153,11 @@
     </div>
 
     <div class="metrics-container">
-      <!-- Métrica Producto -->
       <div class="metric-item">
         <div class="metric-header">
           <span class="metric-label">{{ 'goalReportProduct' | translate }}</span>
           <span class="metric-value">
-            {{ formatNumber(getAggregatedMetrics().producto.achieved) }} / {{ formatNumber(getAggregatedMetrics().producto.goal) }}
+            {{ formatPrice(getAggregatedMetrics().producto.achieved) }} / {{ formatPrice(getAggregatedMetrics().producto.goal) }}
           </span>
         </div>
         <div class="progress-bar-container">
@@ -169,12 +169,11 @@
         </div>
       </div>
 
-      <!-- Métrica Región -->
       <div class="metric-item">
         <div class="metric-header">
           <span class="metric-label">{{ 'goalReportRegion' | translate }}</span>
           <span class="metric-value">
-            {{ formatNumber(getAggregatedMetrics().region.achieved) }} / {{ formatNumber(getAggregatedMetrics().region.goal) }}
+            {{ formatPrice(getAggregatedMetrics().region.achieved) }} / {{ formatPrice(getAggregatedMetrics().region.goal) }}
           </span>
         </div>
         <div class="progress-bar-container">
@@ -186,12 +185,11 @@
         </div>
       </div>
 
-      <!-- Métrica Total -->
       <div class="metric-item">
         <div class="metric-header">
           <span class="metric-label">{{ 'goalReportTotal' | translate }}</span>
           <span class="metric-value">
-            {{ formatNumber(getAggregatedMetrics().total.achieved) }} / {{ formatNumber(getAggregatedMetrics().total.goal) }}
+            {{ formatPrice(getAggregatedMetrics().total.achieved) }} / {{ formatPrice(getAggregatedMetrics().total.goal) }}
           </span>
         </div>
         <div class="progress-bar-container">
@@ -204,50 +202,50 @@
       </div>
     </div>
 
-    <!-- Tabla de detalle de productos -->
     <div class="products-detail-section" *ngIf="getDetalleProductos().length > 0">
       <h3 class="section-title">{{ 'goalReportProductsDetail' | translate }}</h3>
       <div class="table-container">
         <table class="products-table">
           <thead>
-            <tr>
-              <th>{{ 'goalReportProductId' | translate }}</th>
-              <th>{{ 'goalReportSales' | translate }}</th>
-              <th>{{ 'goalReportGoal' | translate }}</th>
-              <th>{{ 'goalReportCompliance' | translate }}</th>
-              <th>{{ 'goalReportStatus' | translate }}</th>
-            </tr>
+          <tr>
+            <th>{{ 'goalReportProductId' | translate }}</th>
+            <th>{{ 'goalReportSales' | translate }}</th>
+            <th>{{ 'goalReportGoal' | translate }}</th>
+            <th>{{ 'goalReportCompliance' | translate }}</th>
+            <th>{{ 'goalReportStatus' | translate }}</th>
+          </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let product of getDetalleProductosSorted()" [class]="'status-' + product.status">
-              <td class="product-id">{{ product.product_id }}</td>
-              <td class="sales-value">{{ formatNumber(product.ventas || 0) }}</td>
-              <td class="goal-value">
-                <span *ngIf="product.goal_vendor || product.goal">
-                  {{ formatNumber(((product.goal_vendor ?? product.goal ?? 0)) * 100) }}
+          <tr *ngFor="let product of getDetalleProductosSorted()" [class]="'status-' + getProductCalculatedStatus(product)">
+            <td class="product-id">{{ product.product_id }}</td>
+            <td class="sales-value">{{ formatPrice(product.ventas || 0) }}</td>
+
+            <td class="goal-value">
+                <span *ngIf="product.goal && product.goal > 0">
+                  {{ formatPrice(product.goal) }}
                 </span>
-                <span *ngIf="!product.goal_vendor && (!product.goal || product.goal === 0)" class="no-goal">
+              <span *ngIf="!product.goal || product.goal === 0" class="no-goal">
                   {{ 'goalReportNoGoal' | translate }}
                 </span>
-              </td>
-              <td class="compliance-value">
-                <span *ngIf="(product.goal_vendor || product.goal) && (product.goal_vendor || product.goal) > 0" [class.high-compliance]="getProductCumplimientoPct(product) >= 100">
+            </td>
+
+            <td class="compliance-value">
+                <span *ngIf="product.goal && product.goal > 0" [class.high-compliance]="getProductCumplimientoPct(product) >= 100">
                   {{ getProductCumplimientoPct(product) | number:'1.2-2' }}%
                 </span>
-                <span *ngIf="(!product.goal_vendor || product.goal_vendor === 0) && (!product.goal || product.goal === 0)" class="no-goal">
+              <span *ngIf="!product.goal || product.goal === 0" class="no-goal">
                   {{ 'goalReportNoGoal' | translate }}
                 </span>
-              </td>
-              <td class="status-cell">
-                <span class="status-badge" [class]="'status-' + product.status">
-                  {{ getStatusLabel(product.status) }}
+            </td>
+            <td class="status-cell">
+                <span class="status-badge" [class]="'status-' + getProductCalculatedStatus(product)">
+                  {{ getStatusLabel(getProductCalculatedStatus(product)) }}
                 </span>
-              </td>
-            </tr>
+            </td>
+          </tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 </div>
-
