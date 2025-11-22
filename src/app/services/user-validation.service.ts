@@ -26,7 +26,7 @@ export class UserValidationService {
   private readonly maxFileSize = 5 * 1024 * 1024; // 5MB según HU107
   private readonly allowedTypes = ['.csv', '.xlsx'];
   private readonly requiredFields = ['nombre', 'apellido', 'correo', 'identificacion', 'telefono', 'rol', 'contraseña'];
-  private readonly validRoles = ['SELLER', 'CLIENT', 'ADMIN'];
+  private readonly validRoles = ['SELLER', 'CLIENT', 'ADMIN', 'PROVIDER'];
 
   /**
    * Valida un archivo CSV de usuarios
@@ -165,15 +165,104 @@ export class UserValidationService {
       const result = await response.json();
       console.log('=== RESPUESTA VALIDACIÓN ===');
       console.log('Resultado:', result);
+      console.log('Errores completos:', JSON.stringify(result.errors, null, 2));
+      console.log('Invalid records:', result.invalid_records);
 
-      if (result.errors && result.errors.length > 0) {
-        errors.push(...result.errors);
+      // Procesar errores del backend
+      if (result.errors && Array.isArray(result.errors) && result.errors.length > 0) {
+        // Filtrar mensajes genéricos y mostrar solo errores específicos
+        const specificErrors = result.errors.filter((err: string) => {
+          const lowerErr = err.toLowerCase();
+          return !lowerErr.includes('¡ups! el archivo tiene errores de validación') &&
+                 !lowerErr.includes('revisa y sube nuevamente') &&
+                 !lowerErr.includes('el archivo tiene errores');
+        });
+        
+        if (specificErrors.length > 0) {
+          errors.push(...specificErrors);
+        } else if (result.error_details && Array.isArray(result.error_details)) {
+          // Si no hay errores específicos, usar error_details
+          result.error_details.forEach((detail: any, index: number) => {
+            if (detail.errors && Array.isArray(detail.errors)) {
+              detail.errors.forEach((err: string) => {
+                errors.push(`Fila ${index + 2}: ${err}`);
+              });
+            } else if (detail.error) {
+              errors.push(`Fila ${index + 2}: ${detail.error}`);
+            }
+          });
+        } else {
+          // Si no hay errores específicos, mostrar los originales pero limpiados
+          errors.push(...result.errors);
+        }
+      } else if (result.message) {
+        // Filtrar mensajes genéricos y mensajes de éxito del message
+        const lowerMsg = result.message.toLowerCase();
+        // NO agregar a errores si es un mensaje de éxito
+        const isSuccessMessage = lowerMsg.includes('validación completada') ||
+                                 lowerMsg.includes('validados') ||
+                                 lowerMsg.includes('válidos de') ||
+                                 lowerMsg.includes('usuarios válidos');
+        
+        // Solo agregar a errores si NO es un mensaje de éxito y NO es un mensaje genérico
+        if (!isSuccessMessage &&
+            !lowerMsg.includes('¡ups! el archivo tiene errores de validación') &&
+            !lowerMsg.includes('revisa y sube nuevamente')) {
+          errors.push(result.message);
+        }
+      }
+
+      // Procesar errores de registros inválidos si existen
+      if (result.invalid_records && result.invalid_records > 0) {
+        // Si hay registros inválidos pero no hay errores específicos, agregar un mensaje genérico
+        if (errors.length === 0) {
+          errors.push(`Se encontraron ${result.invalid_records} registro(s) inválido(s)`);
+        }
+      }
+
+      // Procesar detalles de errores por registro si existen (solo si no se procesaron antes)
+      if (result.error_details && Array.isArray(result.error_details) && errors.length === 0) {
+        result.error_details.forEach((detail: any, index: number) => {
+          if (detail.errors && Array.isArray(detail.errors)) {
+            detail.errors.forEach((err: string) => {
+              errors.push(`Fila ${index + 2}: ${err}`);
+            });
+          } else if (detail.error) {
+            errors.push(`Fila ${index + 2}: ${detail.error}`);
+          }
+        });
       }
 
       if (result.warnings && result.warnings.length > 0) {
         warnings.push(...result.warnings);
       }
 
+      // Determinar si la validación fue exitosa
+      // El backend puede indicar éxito con: is_valid, valid_records > 0, o validated_users/data presentes
+      const backendIsValid = result.is_valid === true || 
+                             (result.valid_records && result.valid_records > 0) ||
+                             (result.validated_users && Array.isArray(result.validated_users) && result.validated_users.length > 0) ||
+                             (result.data && Array.isArray(result.data) && result.data.length > 0);
+      
+      // Si el backend indica que es válido y no hay errores específicos, limpiar errores
+      if (backendIsValid && errors.length === 0) {
+        // La validación fue exitosa
+      } else if (backendIsValid && errors.length > 0) {
+        // Si el backend dice que es válido pero hay errores, verificar si son solo mensajes de éxito
+        const onlySuccessMessages = errors.every(err => {
+          const lowerErr = err.toLowerCase();
+          return lowerErr.includes('validación completada') ||
+                 lowerErr.includes('validados') ||
+                 lowerErr.includes('válidos de') ||
+                 lowerErr.includes('usuarios válidos');
+        });
+        
+        if (onlySuccessMessages) {
+          // Limpiar errores si solo son mensajes de éxito
+          errors.length = 0;
+        }
+      }
+      
       // Usar los usuarios validados del backend si están disponibles
       // El backend puede devolver los datos con nombres en inglés, transformarlos de vuelta
       let validatedUsers = result.validated_users || result.data || (errors.length === 0 ? transformedUsers : undefined);
@@ -191,8 +280,13 @@ export class UserValidationService {
         }));
       }
 
+      // Determinar isValid: debe ser válido si no hay errores Y hay usuarios validados
+      // O si el backend explícitamente dice que es válido
+      const finalIsValid = (errors.length === 0 && validatedUsers !== undefined) || 
+                          (backendIsValid && validatedUsers !== undefined);
+
       return {
-        isValid: errors.length === 0 && validatedUsers !== undefined,
+        isValid: finalIsValid,
         errors,
         warnings,
         data: validatedUsers
@@ -250,9 +344,47 @@ export class UserValidationService {
       let errorMessage = 'Error al insertar usuarios';
       try {
         const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.message || errorJson.error || errorMessage;
-        if (errorJson.errors && Array.isArray(errorJson.errors)) {
-          errorMessage = errorJson.errors.join(', ');
+        
+        // Priorizar errores específicos sobre mensajes genéricos
+        if (errorJson.errors && Array.isArray(errorJson.errors) && errorJson.errors.length > 0) {
+          // Filtrar mensajes genéricos
+          const specificErrors = errorJson.errors.filter((err: string) => {
+            const lowerErr = err.toLowerCase();
+            return !lowerErr.includes('¡ups! el archivo tiene errores de validación') &&
+                   !lowerErr.includes('revisa y sube nuevamente') &&
+                   !lowerErr.includes('el archivo tiene errores');
+          });
+          
+          if (specificErrors.length > 0) {
+            errorMessage = specificErrors.join(', ');
+          } else if (errorJson.error_details && Array.isArray(errorJson.error_details)) {
+            // Usar error_details si hay
+            const details = errorJson.error_details.map((detail: any, index: number) => {
+              if (detail.errors && Array.isArray(detail.errors)) {
+                return `Fila ${index + 2}: ${detail.errors.join(', ')}`;
+              } else if (detail.error) {
+                return `Fila ${index + 2}: ${detail.error}`;
+              }
+              return null;
+            }).filter((d: string | null) => d !== null);
+            
+            if (details.length > 0) {
+              errorMessage = details.join('; ');
+            } else {
+              errorMessage = errorJson.errors.join(', ');
+            }
+          } else {
+            errorMessage = errorJson.errors.join(', ');
+          }
+        } else if (errorJson.message) {
+          // Filtrar mensajes genéricos del message también
+          const lowerMsg = errorJson.message.toLowerCase();
+          if (!lowerMsg.includes('¡ups! el archivo tiene errores de validación') &&
+              !lowerMsg.includes('revisa y sube nuevamente')) {
+            errorMessage = errorJson.message;
+          }
+        } else if (errorJson.error) {
+          errorMessage = errorJson.error;
         }
       } catch {
         errorMessage = errorText || errorMessage;
@@ -501,7 +633,7 @@ export class UserValidationService {
     if (rolIndex !== undefined) {
       const rol = rowData[rolIndex]?.trim().toUpperCase();
       if (rol && !this.validRoles.includes(rol)) {
-        errors.push(`Fila ${rowNum}: El rol "${rol}" no es válido. Debe ser SELLER, CLIENT o ADMIN`);
+        errors.push(`Fila ${rowNum}: El rol "${rol}" no es válido. Debe ser SELLER, CLIENT, ADMIN o PROVIDER`);
       }
     }
 
