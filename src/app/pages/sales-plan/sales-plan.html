@@ -141,7 +141,7 @@
             <!-- Columna 2: Detalles del producto -->
             <div class="product-details">
               <div class="product-name">{{ product.name }}</div>
-              <div class="product-price">{{ getConvertedPrice(product) | currency:currencySymbol():'symbol':'1.0-0' }}</div>
+              <div class="product-price">{{ formatPrice(getConvertedPrice(product)) }}</div>
             </div>
             
             <!-- Columna 3: Botón Meta -->
@@ -336,7 +336,7 @@
       <!-- Indicador de validación -->
       <div class="validating-message" *ngIf="validatingStock()">
         <mat-icon>hourglass_empty</mat-icon>
-        <span>Validando stock disponible...</span>
+        <span>{{ 'validating_stock' | translate }}</span>
       </div>
     </div>
     
@@ -352,7 +352,7 @@
         [disabled]="!goalValue || +goalValue <= 0 || validatingStock()"
         class="save-button">
         <span *ngIf="!validatingStock()">{{ 'save_goal_button' | translate }}</span>
-        <span *ngIf="validatingStock()">Validando...</span>
+        <span *ngIf="validatingStock()">{{ 'validating' | translate }}</span>
       </button>
     </div>
   </div>
@@ -384,19 +384,17 @@
       </div>
 
       <p style="margin-top:12px; font-weight:600;">
-        {{ 'summary_total_value' | translate }}: {{ totalPlannedValue() | currency:currencySymbol():'symbol':'1.0-0' }}
+        {{ 'summary_total_value' | translate }}: {{ formatPrice(totalPlannedValue()) }}
       </p>
 
       <!-- Mensaje de advertencia si el valor manual está fuera del rango permitido -->
       <div *ngIf="!isGoalValid()" style="margin-top:16px; padding:12px; background-color:#fff3cd; border:1px solid #ffc107; border-radius:4px;">
         <div style="display:flex; align-items:center; gap:8px; color:#856404;">
           <mat-icon style="font-size:20px; width:20px; height:20px;">warning</mat-icon>
-          <span style="font-weight:500;">Advertencia de validación</span>
+          <span style="font-weight:500;">{{ 'validation_warning' | translate }}</span>
         </div>
         <p style="margin:8px 0 0 0; color:#856404; font-size:14px;">
-          El valor ingresado debe estar dentro del rango permitido: entre 10% menos y 20% más que el valor calculado automáticamente 
-          ({{ calculatedTotalValue() | currency:currencySymbol():'symbol':'1.0-0' }}). 
-          Por favor, ajusta los valores de los productos o el total para continuar.
+          {{ ('validation_warning_message' | translate).replace('{{calculatedValue}}', formatPrice(calculatedTotalValue())) }}
         </p>
       </div>
     </div>

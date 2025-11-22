@@ -154,6 +154,10 @@
   "showing_results": "Showing",
   "of": "of",
   "page": "Page",
+  "validating_stock": "Validating available stock...",
+  "validating": "Validating...",
+  "validation_warning": "Validation Warning",
+  "validation_warning_message": "The entered value must be within the allowed range: between 10% less and 20% more than the automatically calculated value ({{calculatedValue}}). Please adjust the product values or the total to continue.",
 
   "region_norte": "North",
   "region_centro": "Center",
@@ -194,6 +198,7 @@
   "locationAisle": "Aisle",
   "locationShelf": "Shelf",
   "locationLevel": "Level",
+  "notAvailable": "Not available",
   "lotsDetailTitle": "Lot Details",
   "lotLabel": "Lot",
   "expiresLabel": "Expires",

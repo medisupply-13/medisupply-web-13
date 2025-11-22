@@ -154,6 +154,10 @@
   "showing_results": "Mostrando",
   "of": "de",
   "page": "Página",
+  "validating_stock": "Validando stock disponible...",
+  "validating": "Validando...",
+  "validation_warning": "Advertencia de validación",
+  "validation_warning_message": "El valor ingresado debe estar dentro del rango permitido: entre 10% menos y 20% más que el valor calculado automáticamente ({{calculatedValue}}). Por favor, ajusta los valores de los productos o el total para continuar.",
 
   "region_norte": "Norte",
   "region_centro": "Centro",
@@ -195,6 +199,7 @@
   "locationAisle": "Pasillo",
   "locationShelf": "Mueble",
   "locationLevel": "Nivel",
+  "notAvailable": "No disponible",
   "lotsDetailTitle": "Detalle de Lotes",
   "lotLabel": "Lote",
   "expiresLabel": "Vence",
